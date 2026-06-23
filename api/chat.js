@@ -31,7 +31,7 @@ HTML 코드 안에는 반드시 <style> 태그로 CSS를 넣고, 자바스크립
 코딩을 요구하지 않은 일반적인 질문에는 초등학생 눈높이에 맞춰 친절하게 설명해주되, 절대 길게 설명하지 말고 핵심만 2~3문장 이내로 짧고 쉽게 대답해줘.`;
 
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-pro",
       systemInstruction: systemPrompt 
     });
 
