@@ -257,6 +257,25 @@ iframe {
   border-color: rgba(192, 132, 252, 0.3);
 }
 
+.download-button {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  padding: 6px 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.download-button:hover {
+  background: rgba(56, 189, 248, 0.2);
+}
+
 .code-block {
   margin: 0;
   padding: 20px;

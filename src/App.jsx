@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Code, Play, LogOut, Trash2 } from 'lucide-react';
+import { Send, Sparkles, Code, Play, LogOut, Trash2, Download } from 'lucide-react';
 import { GoogleLogin, googleLogout } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import './App.css';
@@ -67,6 +67,18 @@ function App() {
       setHtmlCode(defaultHtml);
       // localStorage will automatically update via the useEffect above
     }
+  };
+
+  const handleDownload = () => {
+    const blob = new Blob([htmlCode], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'my-game.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleSend = async () => {
@@ -282,6 +294,9 @@ function App() {
                 <Code size={16} /> 코드
               </button>
             </div>
+            <button className="download-button" onClick={handleDownload} title="HTML 파일로 저장">
+              <Download size={16} /> 저장하기
+            </button>
           </div>
           <div className="iframe-container">
             {activeTab === 'preview' ? (
