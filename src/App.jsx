@@ -9,7 +9,7 @@ function App() {
     {
       id: 1,
       sender: 'ai',
-      text: '안녕! 나는 너의 인공지능 코딩 튜터야. 오늘 어떤 웹페이지를 만들어 볼까? 궁금한 게 있으면 편하게 물어봐!'
+      text: '안녕! 궁금한 게 있으면 편하게 물어봐! 코딩도 도와줄 수 있어.'
     }
   ];
   const defaultHtml = '<div style="text-align: center; padding: 2rem; font-family: sans-serif; color: #333;">\n  <h1>안녕! 여기는 프리뷰 화면이야!</h1>\n  <p>왼쪽에서 대화로 코딩을 시작해봐.</p>\n</div>';
