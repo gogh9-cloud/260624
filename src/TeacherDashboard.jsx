@@ -23,8 +23,9 @@ function TeacherDashboard() {
 
     if (error) {
       console.error('Error fetching sessions:', error);
+      setSessions([]);
     } else {
-      setSessions(data);
+      setSessions(data || []);
     }
     setLoading(false);
   };
