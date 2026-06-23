@@ -13,6 +13,7 @@ function App() {
   const [input, setInput] = useState('');
   const [htmlCode, setHtmlCode] = useState('<div style="text-align: center; padding: 2rem; font-family: sans-serif; color: #333;">\n  <h1>안녕! 여기는 프리뷰 화면이야!</h1>\n  <p>왼쪽에서 대화로 코딩을 시작해봐.</p>\n</div>');
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('preview');
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -149,18 +150,33 @@ function App() {
         {/* Sandbox Preview Panel */}
         <section className="preview-panel glass">
           <div className="preview-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Code size={18} color="#9ba1a6" />
-              <span className="preview-title">바이브 코딩 결과물 (미리보기)</span>
+            <div className="tabs">
+              <button 
+                className={`tab-btn ${activeTab === 'preview' ? 'active' : ''}`}
+                onClick={() => setActiveTab('preview')}
+              >
+                <Play size={16} /> 미리보기
+              </button>
+              <button 
+                className={`tab-btn ${activeTab === 'code' ? 'active' : ''}`}
+                onClick={() => setActiveTab('code')}
+              >
+                <Code size={16} /> 코드
+              </button>
             </div>
-            <Play size={18} color="#10b981" />
           </div>
           <div className="iframe-container">
-            <iframe 
-              title="sandbox-preview"
-              srcDoc={htmlCode}
-              sandbox="allow-scripts"
-            />
+            {activeTab === 'preview' ? (
+              <iframe 
+                title="sandbox-preview"
+                srcDoc={htmlCode}
+                sandbox="allow-scripts"
+              />
+            ) : (
+              <pre className="code-block">
+                <code>{htmlCode}</code>
+              </pre>
+            )}
           </div>
         </section>
       </main>
