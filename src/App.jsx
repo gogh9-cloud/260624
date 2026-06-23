@@ -1,19 +1,22 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Code, Play, LogOut } from 'lucide-react';
+import { Send, Sparkles, Code, Play, LogOut, Trash2 } from 'lucide-react';
 import { GoogleLogin, googleLogout } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import './App.css';
 
 function App() {
-  const [messages, setMessages] = useState([
+  const defaultMessages = [
     {
       id: 1,
       sender: 'ai',
       text: '안녕! 나는 너의 인공지능 코딩 튜터야. 오늘 어떤 웹페이지를 만들어 볼까? 궁금한 게 있으면 편하게 물어봐!'
     }
-  ]);
+  ];
+  const defaultHtml = '<div style="text-align: center; padding: 2rem; font-family: sans-serif; color: #333;">\n  <h1>안녕! 여기는 프리뷰 화면이야!</h1>\n  <p>왼쪽에서 대화로 코딩을 시작해봐.</p>\n</div>';
+
+  const [messages, setMessages] = useState(defaultMessages);
   const [input, setInput] = useState('');
-  const [htmlCode, setHtmlCode] = useState('<div style="text-align: center; padding: 2rem; font-family: sans-serif; color: #333;">\n  <h1>안녕! 여기는 프리뷰 화면이야!</h1>\n  <p>왼쪽에서 대화로 코딩을 시작해봐.</p>\n</div>');
+  const [htmlCode, setHtmlCode] = useState(defaultHtml);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('preview');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -24,9 +27,47 @@ function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // 1. 로그인 성공 후 사용자별 데이터 불러오기
   useEffect(() => {
+    if (isLoggedIn && userProfile?.email) {
+      const storageKey = `sandbox_data_${userProfile.email}`;
+      const savedData = localStorage.getItem(storageKey);
+      if (savedData) {
+        try {
+          const { savedMessages, savedHtml } = JSON.parse(savedData);
+          if (savedMessages) setMessages(savedMessages);
+          if (savedHtml) setHtmlCode(savedHtml);
+        } catch (e) {
+          console.error("Failed to parse local storage data:", e);
+        }
+      } else {
+        // If no saved data, ensure defaults are shown
+        setMessages(defaultMessages);
+        setHtmlCode(defaultHtml);
+      }
+    }
+  }, [isLoggedIn, userProfile]);
+
+  // 2. 메시지나 코드가 변경될 때마다 자동 저장하기
+  useEffect(() => {
+    if (isLoggedIn && userProfile?.email) {
+      const storageKey = `sandbox_data_${userProfile.email}`;
+      const dataToSave = {
+        savedMessages: messages,
+        savedHtml: htmlCode
+      };
+      localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+    }
     scrollToBottom();
-  }, [messages]);
+  }, [messages, htmlCode, isLoggedIn, userProfile]);
+
+  const handleClearHistory = () => {
+    if (window.confirm("현재 채팅 내역과 코드를 모두 초기화하시겠습니까? (이 작업은 되돌릴 수 없습니다.)")) {
+      setMessages(defaultMessages);
+      setHtmlCode(defaultHtml);
+      // localStorage will automatically update via the useEffect above
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -173,6 +214,9 @@ function App() {
         
         {userProfile && (
           <div className="header-right">
+            <button className="clear-button" onClick={handleClearHistory} title="채팅 초기화">
+              <Trash2 size={16} /> 초기화
+            </button>
             <div className="user-profile">
               <img src={userProfile.picture} alt={userProfile.name} className="profile-img" />
               <span className="profile-name">{userProfile.name}</span>
