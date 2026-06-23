@@ -49,8 +49,16 @@ function App() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.details || 'API response was not ok');
+        const rawText = await response.text();
+        console.error("Raw Server Error:", rawText);
+        let errorMsg = 'API response was not ok';
+        try {
+          const parsed = JSON.parse(rawText);
+          if (parsed.details) errorMsg = parsed.details;
+        } catch(e) {
+          errorMsg = \`서버 오류(\${response.status}): \${rawText.substring(0, 100)}\`;
+        }
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
