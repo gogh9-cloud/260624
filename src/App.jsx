@@ -60,7 +60,7 @@ function App() {
             errorMsg = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
           }
         } catch(e) {
-          errorMsg = \`서버 오류(\${response.status}): \${rawText.substring(0, 100)}\`;
+          errorMsg = `서버 오류(${response.status}): ${rawText.substring(0, 100)}`;
         }
         throw new Error(errorMsg);
       }
@@ -95,7 +95,7 @@ function App() {
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         sender: 'ai',
-        text: \`앗, 오류가 발생했어. (에러 원인: \${error.message})\`
+        text: `앗, 오류가 발생했어. (에러 원인: ${error.message})`
       }]);
     } finally {
       setIsLoading(false);
