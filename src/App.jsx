@@ -294,7 +294,7 @@ function App() {
       <div className="login-container">
         <div className="login-card glass">
           <Sparkles size={48} color="#c084fc" style={{ marginBottom: '20px' }} />
-          <h1 className="login-title">AI 샌드박스 튜터</h1>
+          <h1 className="login-title">우리반 AI</h1>
           <p className="login-subtitle">구글 계정으로 로그인하고 바이브 코딩을 시작해 보세요!</p>
           <div className="login-button-wrapper">
             <GoogleLogin
@@ -315,7 +315,7 @@ function App() {
             {isSidebarOpen ? <PanelLeftClose size={24} /> : <PanelLeft size={24} />}
           </button>
           <Sparkles size={28} color="#c084fc" />
-          <h1 className="header-title">AI 샌드박스 튜터</h1>
+          <h1 className="header-title">우리반 AI</h1>
         </div>
         
         {userProfile && (
