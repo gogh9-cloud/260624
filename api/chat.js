@@ -57,12 +57,26 @@ HTML 코드 안에는 반드시 <style> 태그로 CSS를 넣고, 자바스크립
       history: history,
     });
 
-    const result = await chat.sendMessage(latestMessage);
-    const responseText = await result.response.text();
+    const result = await chat.sendMessageStream(latestMessage);
+    
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of result.stream) {
+            const chunkText = chunk.text();
+            controller.enqueue(new TextEncoder().encode(chunkText));
+          }
+          controller.close();
+        } catch (e) {
+          console.error("Stream error:", e);
+          controller.error(e);
+        }
+      }
+    });
 
-    return new Response(JSON.stringify({ text: responseText }), {
+    return new Response(stream, {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     });
   } catch (error) {
     console.error("Gemini API Error:", error);

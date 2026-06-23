@@ -66,9 +66,25 @@ function App() {
         throw new Error(errorMsg);
       }
 
-      const data = await response.json();
-      let aiText = data.text;
+      // Read the stream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let aiText = '';
       
+      const aiMessageId = Date.now() + 1;
+      setMessages(prev => [...prev, { id: aiMessageId, sender: 'ai', text: '타이핑 중...' }]);
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) {
+          aiText += decoder.decode(value, { stream: true });
+          setMessages(prev => prev.map(msg => 
+            msg.id === aiMessageId ? { ...msg, text: aiText } : msg
+          ));
+        }
+      }
+
       // Parse markdown html block if it exists
       let htmlBlockRegex = /```[a-z]*\s*([\s\S]*?)```/i;
       let match = aiText.match(htmlBlockRegex);
@@ -83,19 +99,15 @@ function App() {
         // Extract the HTML code and update the preview
         setHtmlCode(match[1].trim());
         // Remove the code block from the text shown in the chat
-        aiText = aiText.replace(htmlBlockRegex, '').trim();
+        aiText = aiText.replace(match[0], '').trim();
         if (!aiText) {
           aiText = '오른쪽 프리뷰 화면에 네가 요청한 코드를 만들어 두었어! 확인해 봐.';
         }
+        // Update the message one last time without the code block
+        setMessages(prev => prev.map(msg => 
+            msg.id === aiMessageId ? { ...msg, text: aiText } : msg
+        ));
       }
-
-      const aiMessage = {
-        id: Date.now() + 1,
-        sender: 'ai',
-        text: aiText
-      };
-
-      setMessages(prev => [...prev, aiMessage]);
 
     } catch (error) {
       console.error("Failed to fetch AI response:", error);
