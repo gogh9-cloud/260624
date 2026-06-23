@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Code, Play, LogOut, Trash2, Download, Plus, MessageSquare, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight } from 'lucide-react';
+import { Send, Sparkles, Code, Play, LogOut, Trash2, Download, Plus, MessageSquare, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Edit2 } from 'lucide-react';
 import { GoogleLogin, googleLogout } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import './App.css';
@@ -25,6 +25,8 @@ function App() {
   const [userProfile, setUserProfile] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [editingSessionId, setEditingSessionId] = useState(null);
+  const [editTitleValue, setEditTitleValue] = useState('');
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -157,6 +159,31 @@ function App() {
         return updated;
       });
     }
+  };
+
+  const handleRenameStart = (e, session) => {
+    e.stopPropagation();
+    setEditingSessionId(session.id);
+    setEditTitleValue(session.title);
+  };
+
+  const handleRenameSave = (sessionId) => {
+    if (editTitleValue.trim()) {
+      setSessions(prev => {
+        const updated = prev.map(s => s.id === sessionId ? { ...s, title: editTitleValue.trim() } : s);
+        if (isLoggedIn && userProfile?.email) {
+          localStorage.setItem(`sandbox_sessions_${userProfile.email}`, JSON.stringify(updated));
+        }
+        return updated;
+      });
+    }
+    setEditingSessionId(null);
+    setEditTitleValue('');
+  };
+
+  const handleRenameCancel = () => {
+    setEditingSessionId(null);
+    setEditTitleValue('');
   };
 
   const handleDownload = () => {
@@ -342,14 +369,38 @@ function App() {
               <div 
                 key={session.id} 
                 className={`session-item ${session.id === currentSessionId ? 'active' : ''}`}
-                onClick={() => handleSwitchSession(session.id)}
+                onClick={() => {
+                  if (editingSessionId !== session.id) handleSwitchSession(session.id);
+                }}
               >
                 <MessageSquare size={16} className="session-icon" />
-                <span className="session-title">{session.title}</span>
-                {session.id === currentSessionId && (
-                  <button className="delete-session-btn" onClick={(e) => handleDeleteSession(e, session.id)} title="삭제">
-                    <Trash2 size={14} />
-                  </button>
+                
+                {editingSessionId === session.id ? (
+                  <input
+                    type="text"
+                    className="session-title-edit"
+                    value={editTitleValue}
+                    onChange={(e) => setEditTitleValue(e.target.value)}
+                    onBlur={() => handleRenameSave(session.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleRenameSave(session.id);
+                      if (e.key === 'Escape') handleRenameCancel();
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <span className="session-title">{session.title}</span>
+                )}
+
+                {session.id === currentSessionId && editingSessionId !== session.id && (
+                  <div className="session-actions">
+                    <button className="icon-action-btn" onClick={(e) => handleRenameStart(e, session)} title="이름 변경">
+                      <Edit2 size={14} />
+                    </button>
+                    <button className="icon-action-btn delete" onClick={(e) => handleDeleteSession(e, session.id)} title="삭제">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
