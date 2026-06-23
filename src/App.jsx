@@ -70,9 +70,15 @@ function App() {
       let aiText = data.text;
       
       // Parse markdown html block if it exists
-      const htmlBlockRegex = /```[a-z]*\s*([\s\S]*?)```/i;
-      const match = aiText.match(htmlBlockRegex);
+      let htmlBlockRegex = /```[a-z]*\s*([\s\S]*?)```/i;
+      let match = aiText.match(htmlBlockRegex);
       
+      if (!match) {
+        // Fallback: AI might have forgotten the closing backticks at the end
+        htmlBlockRegex = /```[a-z]*\s*([\s\S]*)$/i;
+        match = aiText.match(htmlBlockRegex);
+      }
+
       if (match && match[1]) {
         // Extract the HTML code and update the preview
         setHtmlCode(match[1].trim());
