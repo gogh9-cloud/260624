@@ -1,15 +1,28 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export default async function handler(req, res) {
+export const config = {
+  runtime: 'edge',
+};
+
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   try {
-    const { messages } = req.body;
+    const body = await req.json();
+    const { messages } = body;
     
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not set in Vercel Environment Variables.");
+    }
+
     // Initialize Gemini API
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    
     // System Prompt for context
     const systemPrompt = `너는 초등학교 6학년을 가르치는 친절하고 상냥한 인공지능 코딩 튜터야.
 학생이 웹페이지, 버튼, 색깔 변경 등 코딩 결과물을 요구하면, 오직 순수한 HTML/CSS/JS 코드만 \`\`\`html ... \`\`\` 마크다운 블록 안에 작성해서 응답해.
@@ -44,15 +57,20 @@ HTML 코드 안에는 반드시 <style> 태그로 CSS를 넣고, 자바스크립
     });
 
     const result = await chat.sendMessage(latestMessage);
-    const response = await result.response;
-    const text = response.text();
+    const responseText = await result.response.text();
 
-    return res.status(200).json({ text });
+    return new Response(JSON.stringify({ text: responseText }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return res.status(500).json({ 
+    return new Response(JSON.stringify({ 
       error: 'Failed to generate response', 
       details: error.message || String(error)
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 }

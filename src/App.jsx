@@ -54,7 +54,11 @@ function App() {
         let errorMsg = 'API response was not ok';
         try {
           const parsed = JSON.parse(rawText);
-          if (parsed.details) errorMsg = parsed.details;
+          if (parsed.details) {
+            errorMsg = parsed.details;
+          } else if (parsed.error) {
+            errorMsg = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
+          }
         } catch(e) {
           errorMsg = \`서버 오류(\${response.status}): \${rawText.substring(0, 100)}\`;
         }
