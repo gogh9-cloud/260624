@@ -9,8 +9,61 @@
 .header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
   padding: 12px 24px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 12px 4px 4px;
+  border-radius: 20px;
+}
+
+.profile-img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.logout-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: var(--text-muted);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logout-button:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
 }
 
 .header-title {
@@ -197,4 +250,46 @@ iframe {
   line-height: 1.5;
   border-bottom-left-radius: 16px;
   border-bottom-right-radius: 16px;
+}
+
+/* Login Screen Styles */
+.login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 20px;
+}
+
+.login-card {
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border-radius: 24px;
+  max-width: 480px;
+  width: 100%;
+}
+
+.login-title {
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(to right, #c084fc, #38bdf8);
+  -webkit-background-clip: text;
+  color: transparent;
+  margin: 0 0 16px 0;
+}
+
+.login-subtitle {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  margin: 0 0 32px 0;
+  line-height: 1.5;
+}
+
+.login-button-wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }

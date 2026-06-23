@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Code, Play } from 'lucide-react';
+import { Send, Sparkles, Code, Play, LogOut } from 'lucide-react';
+import { GoogleLogin, googleLogout } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 import './App.css';
 
 function App() {
@@ -14,6 +16,8 @@ function App() {
   const [htmlCode, setHtmlCode] = useState('<div style="text-align: center; padding: 2rem; font-family: sans-serif; color: #333;">\n  <h1>안녕! 여기는 프리뷰 화면이야!</h1>\n  <p>왼쪽에서 대화로 코딩을 시작해봐.</p>\n</div>');
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('preview');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -121,11 +125,63 @@ function App() {
     }
   };
 
+  const handleLoginSuccess = (credentialResponse) => {
+    try {
+      const decoded = jwtDecode(credentialResponse.credential);
+      setUserProfile({
+        name: decoded.name,
+        picture: decoded.picture,
+        email: decoded.email
+      });
+      setIsLoggedIn(true);
+    } catch (error) {
+      console.error("Login decoding failed:", error);
+    }
+  };
+
+  const handleLogout = () => {
+    googleLogout();
+    setIsLoggedIn(false);
+    setUserProfile(null);
+  };
+
+  if (!isLoggedIn) {
+    return (
+      <div className="login-container">
+        <div className="login-card glass">
+          <Sparkles size={48} color="#c084fc" style={{ marginBottom: '20px' }} />
+          <h1 className="login-title">AI 샌드박스 튜터</h1>
+          <p className="login-subtitle">구글 계정으로 로그인하고 바이브 코딩을 시작해 보세요!</p>
+          <div className="login-button-wrapper">
+            <GoogleLogin
+              onSuccess={handleLoginSuccess}
+              onError={() => console.error('Login Failed')}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
       <header className="header glass">
-        <Sparkles size={28} color="#c084fc" />
-        <h1 className="header-title">AI 샌드박스 튜터</h1>
+        <div className="header-left">
+          <Sparkles size={28} color="#c084fc" />
+          <h1 className="header-title">AI 샌드박스 튜터</h1>
+        </div>
+        
+        {userProfile && (
+          <div className="header-right">
+            <div className="user-profile">
+              <img src={userProfile.picture} alt={userProfile.name} className="profile-img" />
+              <span className="profile-name">{userProfile.name}</span>
+            </div>
+            <button className="logout-button" onClick={handleLogout} title="로그아웃">
+              <LogOut size={18} />
+            </button>
+          </div>
+        )}
       </header>
 
       <main className="main-content">
