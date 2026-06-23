@@ -55,9 +55,6 @@ HTML 코드 안에는 반드시 <style> 태그로 CSS를 넣고, 자바스크립
 
     const chat = model.startChat({
       history: history,
-      generationConfig: {
-        maxOutputTokens: 1000,
-      },
     });
 
     const result = await chat.sendMessage(latestMessage);
