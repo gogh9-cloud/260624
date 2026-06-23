@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Code, Play, LogOut, Trash2, Download } from 'lucide-react';
+import { Send, Sparkles, Code, Play, LogOut, Trash2, Download, Plus, MessageSquare } from 'lucide-react';
 import { GoogleLogin, googleLogout } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import './App.css';
@@ -14,6 +14,8 @@ function App() {
   ];
   const defaultHtml = '<div style="text-align: center; padding: 2rem; font-family: sans-serif; color: #333;">\n  <h1>안녕! 여기는 프리뷰 화면이야!</h1>\n  <p>왼쪽에서 대화로 코딩을 시작해봐.</p>\n</div>';
 
+  const [sessions, setSessions] = useState([]);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
   const [messages, setMessages] = useState(defaultMessages);
   const [input, setInput] = useState('');
   const [htmlCode, setHtmlCode] = useState(defaultHtml);
@@ -27,45 +29,131 @@ function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // 1. 로그인 성공 후 사용자별 데이터 불러오기
+  // 1. 로그인 성공 후 사용자별 세션 데이터 불러오기
   useEffect(() => {
     if (isLoggedIn && userProfile?.email) {
-      const storageKey = `sandbox_data_${userProfile.email}`;
+      const storageKey = `sandbox_sessions_${userProfile.email}`;
       const savedData = localStorage.getItem(storageKey);
+      
+      let loadedSessions = [];
       if (savedData) {
         try {
-          const { savedMessages, savedHtml } = JSON.parse(savedData);
-          if (savedMessages) setMessages(savedMessages);
-          if (savedHtml) setHtmlCode(savedHtml);
+          loadedSessions = JSON.parse(savedData);
         } catch (e) {
           console.error("Failed to parse local storage data:", e);
         }
+      }
+      
+      // 마이그레이션: 기존 단일 채팅 데이터가 있으면 세션으로 변환
+      const oldStorageKey = `sandbox_data_${userProfile.email}`;
+      const oldSavedData = localStorage.getItem(oldStorageKey);
+      if (loadedSessions.length === 0 && oldSavedData) {
+        try {
+          const oldData = JSON.parse(oldSavedData);
+          if (oldData.savedMessages && oldData.savedMessages.length > 1) {
+             const firstUserMsg = oldData.savedMessages.find(m => m.sender === 'user');
+             const title = firstUserMsg ? firstUserMsg.text.substring(0, 15) : '이전 채팅';
+             loadedSessions = [{
+               id: Date.now().toString(),
+               title: title,
+               messages: oldData.savedMessages,
+               htmlCode: oldData.savedHtml || defaultHtml
+             }];
+             localStorage.removeItem(oldStorageKey);
+          }
+        } catch(e) {}
+      }
+
+      if (loadedSessions.length > 0) {
+        setSessions(loadedSessions);
+        const current = loadedSessions[0];
+        setCurrentSessionId(current.id);
+        setMessages(current.messages);
+        setHtmlCode(current.htmlCode || defaultHtml);
       } else {
-        // If no saved data, ensure defaults are shown
+        const newSessionId = Date.now().toString();
+        const initialSession = {
+          id: newSessionId,
+          title: '새 채팅',
+          messages: defaultMessages,
+          htmlCode: defaultHtml
+        };
+        setSessions([initialSession]);
+        setCurrentSessionId(newSessionId);
         setMessages(defaultMessages);
         setHtmlCode(defaultHtml);
       }
     }
   }, [isLoggedIn, userProfile]);
 
-  // 2. 메시지나 코드가 변경될 때마다 자동 저장하기
+  // 2. 데이터 변경 시 자동 저장 로직
   useEffect(() => {
-    if (isLoggedIn && userProfile?.email) {
-      const storageKey = `sandbox_data_${userProfile.email}`;
-      const dataToSave = {
-        savedMessages: messages,
-        savedHtml: htmlCode
-      };
-      localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+    if (isLoggedIn && userProfile?.email && currentSessionId) {
+       setSessions(prev => {
+          const updated = prev.map(s => {
+             if (s.id === currentSessionId) {
+                let newTitle = s.title;
+                if (newTitle === '새 채팅' && messages.length > 1) {
+                   const firstUserMsg = messages.find(m => m.sender === 'user');
+                   if (firstUserMsg) {
+                     newTitle = firstUserMsg.text.substring(0, 15) + (firstUserMsg.text.length > 15 ? '...' : '');
+                   }
+                }
+                return { ...s, title: newTitle, messages, htmlCode };
+             }
+             return s;
+          });
+          localStorage.setItem(`sandbox_sessions_${userProfile.email}`, JSON.stringify(updated));
+          return updated;
+       });
     }
     scrollToBottom();
-  }, [messages, htmlCode, isLoggedIn, userProfile]);
+  }, [messages, htmlCode, currentSessionId, isLoggedIn, userProfile]);
 
-  const handleClearHistory = () => {
-    if (window.confirm("현재 채팅 내역과 코드를 모두 초기화하시겠습니까? (이 작업은 되돌릴 수 없습니다.)")) {
-      setMessages(defaultMessages);
-      setHtmlCode(defaultHtml);
-      // localStorage will automatically update via the useEffect above
+  const handleNewChat = () => {
+    const newSessionId = Date.now().toString();
+    const newSession = {
+      id: newSessionId,
+      title: '새 채팅',
+      messages: defaultMessages,
+      htmlCode: defaultHtml
+    };
+    setSessions(prev => [newSession, ...prev]);
+    setCurrentSessionId(newSessionId);
+    setMessages(defaultMessages);
+    setHtmlCode(defaultHtml);
+  };
+
+  const handleSwitchSession = (sessionId) => {
+    if (sessionId === currentSessionId) return;
+    const session = sessions.find(s => s.id === sessionId);
+    if (session) {
+      setCurrentSessionId(sessionId);
+      setMessages(session.messages);
+      setHtmlCode(session.htmlCode || defaultHtml);
+    }
+  };
+
+  const handleDeleteSession = (e, sessionId) => {
+    e.stopPropagation();
+    if (window.confirm('이 채팅방을 삭제하시겠습니까?')) {
+      setSessions(prev => {
+        const updated = prev.filter(s => s.id !== sessionId);
+        if (updated.length === 0) {
+           const newSessionId = Date.now().toString();
+           const newSession = { id: newSessionId, title: '새 채팅', messages: defaultMessages, htmlCode: defaultHtml };
+           setCurrentSessionId(newSessionId);
+           setMessages(defaultMessages);
+           setHtmlCode(defaultHtml);
+           return [newSession];
+        } else if (currentSessionId === sessionId) {
+           const nextSession = updated[0];
+           setCurrentSessionId(nextSession.id);
+           setMessages(nextSession.messages);
+           setHtmlCode(nextSession.htmlCode || defaultHtml);
+        }
+        return updated;
+      });
     }
   };
 
@@ -226,9 +314,6 @@ function App() {
         
         {userProfile && (
           <div className="header-right">
-            <button className="clear-button" onClick={handleClearHistory} title="채팅 초기화">
-              <Trash2 size={16} /> 초기화
-            </button>
             <div className="user-profile">
               <img src={userProfile.picture} alt={userProfile.name} className="profile-img" />
               <span className="profile-name">{userProfile.name}</span>
@@ -241,6 +326,30 @@ function App() {
       </header>
 
       <main className="main-content">
+        {/* Sidebar Panel */}
+        <aside className="sidebar glass">
+          <button className="new-chat-button" onClick={handleNewChat}>
+            <Plus size={18} /> 새 채팅
+          </button>
+          <div className="session-list">
+            {sessions.map(session => (
+              <div 
+                key={session.id} 
+                className={`session-item ${session.id === currentSessionId ? 'active' : ''}`}
+                onClick={() => handleSwitchSession(session.id)}
+              >
+                <MessageSquare size={16} className="session-icon" />
+                <span className="session-title">{session.title}</span>
+                {session.id === currentSessionId && (
+                  <button className="delete-session-btn" onClick={(e) => handleDeleteSession(e, session.id)} title="삭제">
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </aside>
+
         {/* Chat Interface Panel */}
         <section className="chat-panel glass">
           <div className="message-list">
