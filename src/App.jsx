@@ -70,7 +70,7 @@ function App() {
       let aiText = data.text;
       
       // Parse markdown html block if it exists
-      const htmlBlockRegex = /```(?:html)?\n([\s\S]*?)```/;
+      const htmlBlockRegex = /```[a-z]*\s*([\s\S]*?)```/i;
       const match = aiText.match(htmlBlockRegex);
       
       if (match && match[1]) {
