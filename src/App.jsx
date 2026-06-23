@@ -322,7 +322,10 @@ function App() {
         <div className="login-card glass">
           <Sparkles size={48} color="#c084fc" style={{ marginBottom: '20px' }} />
           <h1 className="login-title">우리반 AI</h1>
-          <p className="login-subtitle">구글 계정으로 로그인하고 바이브 코딩을 시작해 보세요!</p>
+          <p className="login-subtitle">
+            구글 계정으로 로그인하고<br />
+            바이브 코딩을 시작해 보세요!
+          </p>
           <div className="login-button-wrapper">
             <GoogleLogin
               onSuccess={handleLoginSuccess}
