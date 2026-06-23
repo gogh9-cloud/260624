@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Code, Play, LogOut, Trash2, Download, Plus, MessageSquare } from 'lucide-react';
+import { Send, Sparkles, Code, Play, LogOut, Trash2, Download, Plus, MessageSquare, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight } from 'lucide-react';
 import { GoogleLogin, googleLogout } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import './App.css';
@@ -23,6 +23,8 @@ function App() {
   const [activeTab, setActiveTab] = useState('preview');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -243,6 +245,7 @@ function App() {
       if (match && match[1]) {
         // Extract the HTML code and update the preview
         setHtmlCode(match[1].trim());
+        setIsPreviewOpen(true);
         // Remove the code block from the text shown in the chat
         aiText = aiText.replace(match[0], '').trim();
         if (!aiText) {
@@ -308,6 +311,9 @@ function App() {
     <div className="app-container">
       <header className="header glass">
         <div className="header-left">
+          <button className="toggle-panel-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)} title="사이드바 열기/닫기">
+            {isSidebarOpen ? <PanelLeftClose size={24} /> : <PanelLeft size={24} />}
+          </button>
           <Sparkles size={28} color="#c084fc" />
           <h1 className="header-title">AI 샌드박스 튜터</h1>
         </div>
@@ -327,7 +333,7 @@ function App() {
 
       <main className="main-content">
         {/* Sidebar Panel */}
-        <aside className="sidebar glass">
+        <aside className={`sidebar glass ${isSidebarOpen ? 'open' : 'closed'}`}>
           <button className="new-chat-button" onClick={handleNewChat}>
             <Plus size={18} /> 새 채팅
           </button>
@@ -352,6 +358,13 @@ function App() {
 
         {/* Chat Interface Panel */}
         <section className="chat-panel glass">
+          {!isPreviewOpen && (
+             <div className="chat-top-bar">
+               <button className="toggle-panel-btn float-right" onClick={() => setIsPreviewOpen(true)}>
+                 <PanelRight size={18} /> 프리뷰 열기
+               </button>
+             </div>
+          )}
           <div className="message-list">
             {messages.map((msg) => (
               <div key={msg.id} className={`message animate-fade-in ${msg.sender}`}>
@@ -387,9 +400,12 @@ function App() {
         </section>
 
         {/* Sandbox Preview Panel */}
-        <section className="preview-panel glass">
+        <section className={`preview-panel glass ${isPreviewOpen ? 'open' : 'closed'}`}>
           <div className="preview-header">
             <div className="tabs">
+              <button className="toggle-panel-btn hide-preview" onClick={() => setIsPreviewOpen(false)} title="프리뷰 닫기">
+                <PanelRightClose size={18} />
+              </button>
               <button 
                 className={`tab-btn ${activeTab === 'preview' ? 'active' : ''}`}
                 onClick={() => setActiveTab('preview')}

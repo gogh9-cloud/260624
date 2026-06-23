@@ -109,6 +109,16 @@
   gap: 16px;
   border-right: 1px solid var(--panel-border);
   overflow-y: auto;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.closed {
+  width: 0;
+  padding: 0;
+  border: none;
+  opacity: 0;
+  margin: 0;
+  overflow: hidden;
 }
 
 .new-chat-button {
@@ -199,6 +209,48 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-top-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 24px 0;
+}
+
+.toggle-panel-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.toggle-panel-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.toggle-panel-btn.float-right {
+  background: rgba(192, 132, 252, 0.1);
+  color: #c084fc;
+  border: 1px solid rgba(192, 132, 252, 0.3);
+}
+
+.toggle-panel-btn.float-right:hover {
+  background: rgba(192, 132, 252, 0.2);
+}
+
+.toggle-panel-btn.hide-preview {
+  padding: 4px;
 }
 
 .preview-panel {
@@ -207,6 +259,18 @@
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--primary-accent);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.preview-panel.closed {
+  flex: 0;
+  width: 0;
+  min-width: 0;
+  border: none;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 /* Chat Styles */
