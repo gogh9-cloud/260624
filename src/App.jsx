@@ -49,7 +49,8 @@ function App() {
       });
 
       if (!response.ok) {
-        throw new Error('API response was not ok');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.details || 'API response was not ok');
       }
 
       const data = await response.json();
@@ -82,7 +83,7 @@ function App() {
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         sender: 'ai',
-        text: '앗, 오류가 발생했어. 다시 한 번 말해줄래?'
+        text: \`앗, 오류가 발생했어. (에러 원인: \${error.message})\`
       }]);
     } finally {
       setIsLoading(false);

@@ -50,6 +50,9 @@ HTML 코드 안에는 반드시 <style> 태그로 CSS를 넣고, 자바스크립
     return res.status(200).json({ text });
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return res.status(500).json({ error: 'Failed to generate response' });
+    return res.status(500).json({ 
+      error: 'Failed to generate response', 
+      details: error.message || String(error)
+    });
   }
 }
