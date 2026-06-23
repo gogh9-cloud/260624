@@ -12,6 +12,7 @@ function App() {
   ]);
   const [input, setInput] = useState('');
   const [htmlCode, setHtmlCode] = useState('<div style="text-align: center; padding: 2rem; font-family: sans-serif; color: #333;">\n  <h1>안녕! 여기는 프리뷰 화면이야!</h1>\n  <p>왼쪽에서 대화로 코딩을 시작해봐.</p>\n</div>');
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -22,8 +23,8 @@ function App() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
 
     const userMessage = {
       id: Date.now(),
@@ -31,34 +32,61 @@ function App() {
       text: input.trim()
     };
     
-    setMessages(prev => [...prev, userMessage]);
+    // Add user message to state
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInput('');
+    setIsLoading(true);
 
-    // Mock AI Response
-    setTimeout(() => {
-      const isCodingRequest = userMessage.text.includes('만들어') || userMessage.text.includes('버튼') || userMessage.text.includes('색');
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // Send history excluding the initial welcome message if needed, but sending all is fine
+        body: JSON.stringify({ messages: newMessages }),
+      });
+
+      if (!response.ok) {
+        throw new Error('API response was not ok');
+      }
+
+      const data = await response.json();
+      let aiText = data.text;
       
-      const aiResponse = {
+      // Parse markdown html block if it exists
+      const htmlBlockRegex = /```(?:html)?\n([\s\S]*?)```/;
+      const match = aiText.match(htmlBlockRegex);
+      
+      if (match && match[1]) {
+        // Extract the HTML code and update the preview
+        setHtmlCode(match[1].trim());
+        // Remove the code block from the text shown in the chat
+        aiText = aiText.replace(htmlBlockRegex, '').trim();
+        if (!aiText) {
+          aiText = '오른쪽 프리뷰 화면에 네가 요청한 코드를 만들어 두었어! 확인해 봐.';
+        }
+      }
+
+      const aiMessage = {
         id: Date.now() + 1,
         sender: 'ai',
-        text: isCodingRequest 
-          ? '좋아! 네가 말한대로 코드를 수정해 봤어. 오른쪽 화면을 확인해 봐!' 
-          : '훌륭한 질문이야! 웹페이지는 HTML이라는 뼈대와 CSS라는 예쁜 옷으로 만들어져. 또 궁금한 거 있니?'
+        text: aiText
       };
 
-      setMessages(prev => [...prev, aiResponse]);
+      setMessages(prev => [...prev, aiMessage]);
 
-      if (isCodingRequest) {
-        setHtmlCode(`
-          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: 'Comic Sans MS', sans-serif; background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);">
-            <h1 style="color: #fff; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">네가 만든 멋진 웹페이지!</h1>
-            <button style="padding: 15px 30px; font-size: 1.2rem; background: #ff758c; color: white; border: none; border-radius: 25px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 117, 140, 0.4); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-              나를 눌러봐!
-            </button>
-          </div>
-        `);
-      }
-    }, 1000);
+    } catch (error) {
+      console.error("Failed to fetch AI response:", error);
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        sender: 'ai',
+        text: '앗, 오류가 발생했어. 다시 한 번 말해줄래?'
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -77,6 +105,11 @@ function App() {
                 {msg.text}
               </div>
             ))}
+            {isLoading && (
+              <div className="message ai animate-fade-in">
+                튜터가 생각 중이야... 💭
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
           
@@ -88,11 +121,12 @@ function App() {
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
               placeholder="튜터에게 궁금한 걸 물어보거나 코딩을 부탁해 봐!"
+              disabled={isLoading}
             />
             <button 
               className="send-button" 
               onClick={handleSend}
-              disabled={!input.trim()}
+              disabled={!input.trim() || isLoading}
             >
               <Send size={20} />
             </button>
