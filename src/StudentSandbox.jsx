@@ -229,11 +229,26 @@ function StudentSandbox() {
   };
 
   const handleDownload = () => {
+    const session = sessions.find(s => s.id === currentSessionId);
+    let fileName = 'my-app.html';
+    
+    if (session && session.title) {
+      // 윈도우/맥 등에서 파일명으로 쓸 수 없는 특수문자 제거 및 공백을 하이픈으로 변경
+      const safeTitle = session.title
+        .replace(/[^a-zA-Z0-9가-힣ㄱ-ㅎㅏ-ㅣ\s_-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-');
+        
+      if (safeTitle) {
+        fileName = `${safeTitle}.html`;
+      }
+    }
+
     const blob = new Blob([htmlCode], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'my-game.html';
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
