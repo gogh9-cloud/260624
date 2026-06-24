@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Code, Play, LogOut, Trash2, Download, Plus, MessageSquare, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Edit2, LayoutDashboard } from 'lucide-react';
+import { Send, Sparkles, Code, Play, LogOut, Trash2, Download, Plus, MessageSquare, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Edit2, LayoutDashboard, Copy, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { GoogleLogin, googleLogout } from '@react-oauth/google';
@@ -30,6 +30,7 @@ function StudentSandbox() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [editTitleValue, setEditTitleValue] = useState('');
+  const [isCopied, setIsCopied] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -226,6 +227,13 @@ function StudentSandbox() {
   const handleRenameCancel = () => {
     setEditingSessionId(null);
     setEditTitleValue('');
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(htmlCode).then(() => {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    });
   };
 
   const handleDownload = () => {
@@ -539,9 +547,14 @@ function StudentSandbox() {
                 <Code size={16} /> 코드
               </button>
             </div>
-            <button className="download-button" onClick={handleDownload} title="HTML 파일로 저장">
-              <Download size={16} /> 저장하기
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="download-button" onClick={handleCopy} title="코드 복사">
+                {isCopied ? <Check size={16} /> : <Copy size={16} />} {isCopied ? '복사됨' : '코드 복사'}
+              </button>
+              <button className="download-button" onClick={handleDownload} title="HTML 파일로 저장">
+                <Download size={16} /> 저장하기
+              </button>
+            </div>
           </div>
           <div className="iframe-container">
             {activeTab === 'preview' ? (
