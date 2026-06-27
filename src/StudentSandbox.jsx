@@ -23,6 +23,7 @@ function StudentSandbox() {
   const [input, setInput] = useState('');
   const [htmlCode, setHtmlCode] = useState(defaultHtml);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState('튜터가 생각 중이야... 💭');
   const [activeTab, setActiveTab] = useState('preview');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
@@ -289,6 +290,16 @@ function StudentSandbox() {
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
+    setLoadingText('튜터가 생각 중이야... 💭');
+
+    // Timers to update loading text for long tasks
+    var loadingTimer = setTimeout(() => {
+      setLoadingText('코드가 조금 길어서 꼼꼼하게 작성하고 있어요... 🛠️');
+    }, 8000);
+    
+    var loadingTimer2 = setTimeout(() => {
+      setLoadingText('거의 다 완성되어 가요. 조금만 더 기다려 주세요! 🚀');
+    }, 18000);
 
     try {
       const response = await fetch('/api/chat', {
@@ -304,15 +315,19 @@ function StudentSandbox() {
         const rawText = await response.text();
         console.error("Raw Server Error:", rawText);
         let errorMsg = 'API response was not ok';
-        try {
-          const parsed = JSON.parse(rawText);
-          if (parsed.details) {
-            errorMsg = parsed.details;
-          } else if (parsed.error) {
-            errorMsg = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
+        if (response.status === 504) {
+          errorMsg = "코드가 조금 길어 AI 튜터가 생각하는 데 시간이 초과(504 Timeout)되었어요. 더 짧은 질문으로 나누어 물어보거나, 기능을 하나씩 나눠서 구현해 달라고 부탁해 보세요!";
+        } else {
+          try {
+            const parsed = JSON.parse(rawText);
+            if (parsed.details) {
+              errorMsg = parsed.details;
+            } else if (parsed.error) {
+              errorMsg = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
+            }
+          } catch(e) {
+            errorMsg = `서버 오류(${response.status}): ${rawText.substring(0, 100)}`;
           }
-        } catch(e) {
-          errorMsg = `서버 오류(${response.status}): ${rawText.substring(0, 100)}`;
         }
         throw new Error(errorMsg);
       }
@@ -369,6 +384,8 @@ function StudentSandbox() {
         text: `앗, 오류가 발생했어. (에러 원인: ${error.message})`
       }]);
     } finally {
+      clearTimeout(loadingTimer);
+      clearTimeout(loadingTimer2);
       setIsLoading(false);
     }
   };
@@ -613,7 +630,7 @@ function StudentSandbox() {
             ))}
             {isLoading && (
               <div className="message ai animate-fade-in">
-                튜터가 생각 중이야... 💭
+                {loadingText}
               </div>
             )}
             <div ref={messagesEndRef} />
