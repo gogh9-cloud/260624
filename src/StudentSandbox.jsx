@@ -31,6 +31,8 @@ function StudentSandbox() {
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [editTitleValue, setEditTitleValue] = useState('');
   const [isCopied, setIsCopied] = useState(false);
+  const [hasAgreedToGuidelines, setHasAgreedToGuidelines] = useState(false);
+  const [isGuidelineChecked, setIsGuidelineChecked] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -40,6 +42,13 @@ function StudentSandbox() {
   // 1. 로그인 성공 후 사용자별 세션 데이터 불러오기
   useEffect(() => {
     if (isLoggedIn && userProfile?.email) {
+      const agreed = localStorage.getItem(`agreed_guidelines_${userProfile.email}`);
+      if (agreed === 'true') {
+        setHasAgreedToGuidelines(true);
+      } else {
+        setHasAgreedToGuidelines(false);
+      }
+
       const storageKey = `sandbox_sessions_${userProfile.email}`;
       const savedData = localStorage.getItem(storageKey);
       
@@ -402,8 +411,65 @@ function StudentSandbox() {
     );
   }
 
+  const handleAgreeGuidelines = () => {
+    localStorage.setItem(`agreed_guidelines_${userProfile.email}`, 'true');
+    setHasAgreedToGuidelines(true);
+  };
+
   return (
     <div className="app-container">
+      {/* 가이드라인 모달 */}
+      {isLoggedIn && !hasAgreedToGuidelines && (
+        <div className="guideline-modal-overlay">
+          <div className="guideline-modal-content glass">
+            <h2>생성형 AI 활용 가이드 🌟</h2>
+            <p className="guideline-intro">본격적인 바이브 코딩을 시작하기 전에 아래 약속을 꼭 읽고 지켜주세요!</p>
+            <ul className="guideline-list">
+              <li>
+                <strong>1. 활용 목적</strong>
+                <p>생성형 AI를 쓰기 전, '왜' 쓰는지 말할 수 있어야 해요.</p>
+              </li>
+              <li>
+                <strong>2. 주도적 학습</strong>
+                <p>생성형 AI에게 물어보기 전, 내 생각을 먼저 말해요.</p>
+              </li>
+              <li>
+                <strong>3. 비판적 검증</strong>
+                <p>생성형 AI가 틀릴 수 있다는 점을 알아요.</p>
+              </li>
+              <li>
+                <strong>4. 사고의 확장</strong>
+                <p>생성형 AI와 함께 상상하며 내 생각을 더 크게 키워요.</p>
+              </li>
+              <li>
+                <strong>5. 안전과 관계</strong>
+                <p>나의 정보와 비밀을 말하지 않아요.</p>
+              </li>
+              <li>
+                <strong>6. 투명성·윤리</strong>
+                <p>생성형 AI의 도움을 받았다면 숨기지 않고 정직하게 이야기해요.</p>
+              </li>
+            </ul>
+            <div className="guideline-checkbox-wrapper">
+              <input 
+                type="checkbox" 
+                id="guideline-agree" 
+                checked={isGuidelineChecked}
+                onChange={(e) => setIsGuidelineChecked(e.target.checked)}
+              />
+              <label htmlFor="guideline-agree">위 가이드를 모두 읽고 이해했습니다.</label>
+            </div>
+            <button 
+              className="guideline-agree-btn" 
+              onClick={handleAgreeGuidelines} 
+              disabled={!isGuidelineChecked}
+            >
+              동의하고 시작하기
+            </button>
+          </div>
+        </div>
+      )}
+
       <header className="header glass">
         <div className="header-left">
           <button className="toggle-panel-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)} title="사이드바 열기/닫기">
