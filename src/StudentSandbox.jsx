@@ -38,6 +38,9 @@ function StudentSandbox() {
     q1: '', q2: '', q3: '', q4: '', q5: '', q6: ''
   });
   const messagesEndRef = useRef(null);
+  const loadingTimerRef = useRef(null);
+  const loadingTimer2Ref = useRef(null);
+  const abortControllerRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -152,6 +155,15 @@ function StudentSandbox() {
   }, [messages, htmlCode, currentSessionId, isLoggedIn, userProfile]);
 
   const handleNewChat = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    clearTimeout(loadingTimerRef.current);
+    clearTimeout(loadingTimer2Ref.current);
+    setIsLoading(false);
+    setLoadingText('튜터가 생각 중이야... 💭');
+
     const newSessionId = Date.now().toString();
     const newSession = {
       id: newSessionId,
@@ -167,6 +179,16 @@ function StudentSandbox() {
 
   const handleSwitchSession = (sessionId) => {
     if (sessionId === currentSessionId) return;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    clearTimeout(loadingTimerRef.current);
+    clearTimeout(loadingTimer2Ref.current);
+    setIsLoading(false);
+    setLoadingText('튜터가 생각 중이야... 💭');
+
     const session = sessions.find(s => s.id === sessionId);
     if (session) {
       setCurrentSessionId(sessionId);
@@ -279,6 +301,12 @@ function StudentSandbox() {
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
     const userMessage = {
       id: Date.now(),
       sender: 'user',
@@ -293,11 +321,11 @@ function StudentSandbox() {
     setLoadingText('튜터가 생각 중이야... 💭');
 
     // Timers to update loading text for long tasks
-    var loadingTimer = setTimeout(() => {
+    loadingTimerRef.current = setTimeout(() => {
       setLoadingText('코드가 조금 길어서 꼼꼼하게 작성하고 있어요... 🛠️');
     }, 8000);
     
-    var loadingTimer2 = setTimeout(() => {
+    loadingTimer2Ref.current = setTimeout(() => {
       setLoadingText('거의 다 완성되어 가요. 조금만 더 기다려 주세요! 🚀');
     }, 18000);
 
@@ -309,6 +337,7 @@ function StudentSandbox() {
         },
         // Send history excluding the initial welcome message if needed, but sending all is fine
         body: JSON.stringify({ messages: newMessages }),
+        signal: signal,
       });
 
       if (!response.ok) {
@@ -383,6 +412,10 @@ function StudentSandbox() {
       }
 
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log("Request aborted.");
+        return;
+      }
       console.error("Failed to fetch AI response:", error);
       setMessages(prev => {
         const cleanMessages = prev.filter(msg => msg.id !== aiMessageId);
@@ -393,8 +426,8 @@ function StudentSandbox() {
         }];
       });
     } finally {
-      clearTimeout(loadingTimer);
-      clearTimeout(loadingTimer2);
+      clearTimeout(loadingTimerRef.current);
+      clearTimeout(loadingTimer2Ref.current);
       setIsLoading(false);
     }
   };
