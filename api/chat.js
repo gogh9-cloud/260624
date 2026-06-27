@@ -98,7 +98,10 @@ export default async function handler(req) {
     status: 200,
     headers: { 
       'Content-Type': 'text/plain; charset=utf-8',
-      'Transfer-Encoding': 'chunked'
+      'Transfer-Encoding': 'chunked',
+      'X-Accel-Buffering': 'no',
+      'Cache-Control': 'no-cache, no-transform',
+      'X-Content-Type-Options': 'nosniff'
     },
   });
 }
