@@ -615,7 +615,7 @@ iframe {
 .guideline-item-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
   margin-bottom: 8px;
 }
 
@@ -637,7 +637,6 @@ iframe {
   color: var(--text-color);
   font-size: 0.95rem;
   line-height: 1.6;
-  padding-left: 28px;
 }
 
 .guideline-input {
@@ -653,6 +652,10 @@ iframe {
   margin: 0 4px;
   outline: none;
   transition: border-color 0.2s;
+}
+
+.guideline-input::placeholder {
+  color: rgba(255, 255, 255, 0.2);
 }
 
 .guideline-input:focus {

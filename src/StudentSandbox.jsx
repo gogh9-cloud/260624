@@ -441,58 +441,58 @@ function StudentSandbox() {
             <ul className="guideline-list">
               <li className={isQ1Correct ? 'correct' : ''}>
                 <div className="guideline-item-header">
-                  <input type="checkbox" checked={isQ1Correct} readOnly />
                   <strong>1. 활용 목적</strong>
+                  <input type="checkbox" checked={isQ1Correct} readOnly />
                 </div>
                 <p>
                   생성형 AI를 쓰기 전, '
-                  <input type="text" className="guideline-input" value={guidelineAnswers.q1} onChange={(e) => handleGuidelineChange('q1', e.target.value)} maxLength={5} />
+                  <input type="text" className="guideline-input" value={guidelineAnswers.q1} onChange={(e) => handleGuidelineChange('q1', e.target.value)} maxLength={5} placeholder="왜" />
                   ' 쓰는지 말할 수 있어야 해요.
                 </p>
               </li>
               <li className={isQ2Correct ? 'correct' : ''}>
                 <div className="guideline-item-header">
-                  <input type="checkbox" checked={isQ2Correct} readOnly />
                   <strong>2. 주도적 학습</strong>
+                  <input type="checkbox" checked={isQ2Correct} readOnly />
                 </div>
                 <p>
-                  생성형 AI에게 물어보기 전, 내 <input type="text" className="guideline-input" value={guidelineAnswers.q2} onChange={(e) => handleGuidelineChange('q2', e.target.value)} maxLength={5} />을(를) 먼저 말해요.
+                  생성형 AI에게 물어보기 전, 내 <input type="text" className="guideline-input" value={guidelineAnswers.q2} onChange={(e) => handleGuidelineChange('q2', e.target.value)} maxLength={5} placeholder="생각" />을(를) 먼저 말해요.
                 </p>
               </li>
               <li className={isQ3Correct ? 'correct' : ''}>
                 <div className="guideline-item-header">
-                  <input type="checkbox" checked={isQ3Correct} readOnly />
                   <strong>3. 비판적 검증</strong>
+                  <input type="checkbox" checked={isQ3Correct} readOnly />
                 </div>
                 <p>
-                  생성형 AI가 <input type="text" className="guideline-input" value={guidelineAnswers.q3} onChange={(e) => handleGuidelineChange('q3', e.target.value)} maxLength={5} /> 수 있다는 점을 알아요.
+                  생성형 AI가 <input type="text" className="guideline-input" value={guidelineAnswers.q3} onChange={(e) => handleGuidelineChange('q3', e.target.value)} maxLength={5} placeholder="틀릴" /> 수 있다는 점을 알아요.
                 </p>
               </li>
               <li className={isQ4Correct ? 'correct' : ''}>
                 <div className="guideline-item-header">
-                  <input type="checkbox" checked={isQ4Correct} readOnly />
                   <strong>4. 사고의 확장</strong>
+                  <input type="checkbox" checked={isQ4Correct} readOnly />
                 </div>
                 <p>
-                  생성형 AI와 함께 상상하며 내 생각을 더 크게 <input type="text" className="guideline-input" value={guidelineAnswers.q4} onChange={(e) => handleGuidelineChange('q4', e.target.value)} maxLength={5} />.
+                  생성형 AI와 함께 상상하며 내 생각을 더 크게 <input type="text" className="guideline-input" value={guidelineAnswers.q4} onChange={(e) => handleGuidelineChange('q4', e.target.value)} maxLength={5} placeholder="키워요" />.
                 </p>
               </li>
               <li className={isQ5Correct ? 'correct' : ''}>
                 <div className="guideline-item-header">
-                  <input type="checkbox" checked={isQ5Correct} readOnly />
                   <strong>5. 안전과 관계</strong>
+                  <input type="checkbox" checked={isQ5Correct} readOnly />
                 </div>
                 <p>
-                  나의 정보와 <input type="text" className="guideline-input" value={guidelineAnswers.q5} onChange={(e) => handleGuidelineChange('q5', e.target.value)} maxLength={5} />을(를) 말하지 않아요.
+                  나의 정보와 <input type="text" className="guideline-input" value={guidelineAnswers.q5} onChange={(e) => handleGuidelineChange('q5', e.target.value)} maxLength={5} placeholder="비밀" />을(를) 말하지 않아요.
                 </p>
               </li>
               <li className={isQ6Correct ? 'correct' : ''}>
                 <div className="guideline-item-header">
-                  <input type="checkbox" checked={isQ6Correct} readOnly />
                   <strong>6. 투명성·윤리</strong>
+                  <input type="checkbox" checked={isQ6Correct} readOnly />
                 </div>
                 <p>
-                  생성형 AI의 도움을 받았다면 숨기지 않고 <input type="text" className="guideline-input" value={guidelineAnswers.q6} onChange={(e) => handleGuidelineChange('q6', e.target.value)} maxLength={5} />하게 이야기해요.
+                  생성형 AI의 도움을 받았다면 숨기지 않고 <input type="text" className="guideline-input" value={guidelineAnswers.q6} onChange={(e) => handleGuidelineChange('q6', e.target.value)} maxLength={5} placeholder="정직" />하게 이야기해요.
                 </p>
               </li>
             </ul>
