@@ -25,8 +25,20 @@ function StudentSandbox() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('튜터가 생각 중이야... 💭');
   const [activeTab, setActiveTab] = useState('preview');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userProfile, setUserProfile] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('user_profile') ? true : false;
+  });
+  const [userProfile, setUserProfile] = useState(() => {
+    const saved = localStorage.getItem('user_profile');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -435,11 +447,13 @@ function StudentSandbox() {
   const handleLoginSuccess = (credentialResponse) => {
     try {
       const decoded = jwtDecode(credentialResponse.credential);
-      setUserProfile({
+      const profile = {
         name: decoded.name,
         picture: decoded.picture,
         email: decoded.email
-      });
+      };
+      localStorage.setItem('user_profile', JSON.stringify(profile));
+      setUserProfile(profile);
       setIsLoggedIn(true);
     } catch (error) {
       console.error("Login decoding failed:", error);
@@ -448,6 +462,7 @@ function StudentSandbox() {
 
   const handleLogout = () => {
     googleLogout();
+    localStorage.removeItem('user_profile');
     setIsLoggedIn(false);
     setUserProfile(null);
   };
