@@ -2,41 +2,36 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const config = {
   maxDuration: 300,
-  supportsResponseStreaming: true,
 };
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  let messages;
-  try {
-    const body = await req.json();
-    messages = body.messages;
-  } catch (e) {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: 'GEMINI_API_KEY is not set in Vercel Environment Variables.' });
+  }
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      try {
-        if (!apiKey) {
-          throw new Error("GEMINI_API_KEY is not set in Vercel Environment Variables.");
-        }
+  const messages = req.body?.messages;
+  if (!messages || !Array.isArray(messages)) {
+    return res.status(400).json({ error: 'Invalid request body' });
+  }
 
-        // Initialize Gemini API inside start to avoid blocking response returning
-        const genAI = new GoogleGenerativeAI(apiKey);
-        
-        const systemPrompt = `너는 초등학교 6학년을 가르치는 친절하고 상냥한 인공지능 코딩 튜터야.
+  // 스트리밍 헤더를 즉시 전송 — 이 시점에서 Vercel Gateway 타임아웃(TTFB 10초) 해결
+  res.writeHead(200, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Transfer-Encoding': 'chunked',
+    'X-Accel-Buffering': 'no',
+    'Cache-Control': 'no-cache, no-transform',
+    'X-Content-Type-Options': 'nosniff',
+  });
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    
+    const systemPrompt = `너는 초등학교 6학년을 가르치는 친절하고 상냥한 인공지능 코딩 튜터야.
  
  [중요 기획 원칙: PID(Project Intent & Description) 작성 유도]
  학생이 "게임 만들어줘", "웹사이트 만들어줘" 처럼 막연하게 코딩 결과물을 요구하면, 절대 바로 코드를 작성해주지 마.
@@ -53,57 +48,43 @@ export default async function handler(req) {
  학생이 코딩과 무관한 유해한 질문을 하면 "저는 코딩과 학습을 돕는 튜터예요."라고 거절해.
  기획 대화 중이거나 일반적인 질문에 답할 때는 초등학생 눈높이에 맞춰서 다정하게 2~3문장 이내로 짧게 대답해줘.`;
 
-        const model = genAI.getGenerativeModel({ 
-          model: "gemini-2.5-flash",
-          systemInstruction: systemPrompt,
-          generationConfig: {
-            maxOutputTokens: 8192,
-          }
-        });
-
-        // Remove the initial AI welcome message to ensure history starts with 'user'
-        let historyMessages = messages.slice(0, -1);
-        if (historyMessages.length > 0 && historyMessages[0].id === 1) {
-          historyMessages = historyMessages.slice(1);
-        }
-
-        // Build the chat history for Gemini
-        const history = historyMessages.map(msg => ({
-          role: msg.sender === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.text }]
-        }));
-
-        const latestMessage = messages[messages.length - 1].text;
-
-        const chat = model.startChat({
-          history: history,
-        });
-
-        const result = await chat.sendMessageStream(latestMessage);
-        
-        for await (const chunk of result.stream) {
-          const chunkText = chunk.text();
-          controller.enqueue(new TextEncoder().encode(chunkText));
-        }
-        controller.close();
-      } catch (e) {
-        console.error("Stream error in edge function:", e);
-        const errMessage = e.message || String(e);
-        controller.enqueue(new TextEncoder().encode(`[API_ERROR: ${errMessage}]`));
-        controller.close();
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.5-flash",
+      systemInstruction: systemPrompt,
+      generationConfig: {
+        maxOutputTokens: 8192,
       }
-    }
-  });
+    });
 
-  return new Response(stream, {
-    status: 200,
-    headers: { 
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Transfer-Encoding': 'chunked',
-      'X-Accel-Buffering': 'no',
-      'Cache-Control': 'no-cache, no-transform',
-      'X-Content-Type-Options': 'nosniff'
-    },
-  });
+    // Remove the initial AI welcome message to ensure history starts with 'user'
+    let historyMessages = messages.slice(0, -1);
+    if (historyMessages.length > 0 && historyMessages[0].id === 1) {
+      historyMessages = historyMessages.slice(1);
+    }
+
+    // Build the chat history for Gemini
+    const history = historyMessages.map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.text }]
+    }));
+
+    const latestMessage = messages[messages.length - 1].text;
+
+    const chat = model.startChat({
+      history: history,
+    });
+
+    const result = await chat.sendMessageStream(latestMessage);
+    
+    for await (const chunk of result.stream) {
+      const chunkText = chunk.text();
+      res.write(chunkText);
+    }
+    res.end();
+  } catch (e) {
+    console.error("Stream error:", e);
+    const errMessage = e.message || String(e);
+    res.write(`[API_ERROR: ${errMessage}]`);
+    res.end();
+  }
 }
-  
