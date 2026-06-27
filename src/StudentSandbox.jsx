@@ -27,6 +27,7 @@ function StudentSandbox() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(true);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [editTitleValue, setEditTitleValue] = useState('');
@@ -539,6 +540,11 @@ function StudentSandbox() {
       </header>
 
       <main className="main-content">
+        {/* Sidebar Panel Overlay for mobile */}
+        {isSidebarOpen && (
+          <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)} />
+        )}
+        
         {/* Sidebar Panel */}
         <aside className={`sidebar glass ${isSidebarOpen ? 'open' : 'closed'}`}>
           <button className="new-chat-button" onClick={handleNewChat}>
@@ -588,14 +594,17 @@ function StudentSandbox() {
         </aside>
 
         {/* Chat Interface Panel */}
-        <section className="chat-panel glass">
-          {!isPreviewOpen && (
-             <div className="chat-top-bar">
-               <button className="toggle-panel-btn float-right" onClick={() => setIsPreviewOpen(true)}>
-                 <PanelRight size={18} /> 프리뷰 열기
-               </button>
-             </div>
-          )}
+        <section className={`chat-panel glass ${isChatOpen ? 'open' : 'closed'}`}>
+          <div className="chat-top-bar">
+            <button className="toggle-panel-btn float-left chat-close-btn" onClick={() => setIsChatOpen(false)} title="대화창 닫기">
+              <PanelLeftClose size={18} /> 대화창 닫기
+            </button>
+            {!isPreviewOpen && (
+              <button className="toggle-panel-btn float-right" onClick={() => setIsPreviewOpen(true)}>
+                <PanelRight size={18} /> 프리뷰 열기
+              </button>
+            )}
+          </div>
           <div className="message-list">
             {messages.map((msg) => (
               <div key={msg.id} className={`message animate-fade-in ${msg.sender}`}>
@@ -630,6 +639,22 @@ function StudentSandbox() {
           </div>
         </section>
 
+        {/* Closed panels indicator or floating trigger bar */}
+        {(!isChatOpen || !isPreviewOpen) && (
+          <div className="collapsed-panels-indicator">
+            {!isChatOpen && (
+              <button className="toggle-panel-btn float-right open-chat-btn" onClick={() => setIsChatOpen(true)}>
+                <MessageSquare size={18} /> 대화창 열기
+              </button>
+            )}
+            {!isPreviewOpen && isChatOpen === false && (
+              <button className="toggle-panel-btn float-right open-preview-btn" onClick={() => setIsPreviewOpen(true)}>
+                <PanelRight size={18} /> 프리뷰 열기
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Sandbox Preview Panel */}
         <section className={`preview-panel glass ${isPreviewOpen ? 'open' : 'closed'}`}>
           <div className="preview-header">
@@ -637,6 +662,11 @@ function StudentSandbox() {
               <button className="toggle-panel-btn hide-preview" onClick={() => setIsPreviewOpen(false)} title="프리뷰 닫기">
                 <PanelRightClose size={18} />
               </button>
+              {!isChatOpen && (
+                <button className="toggle-panel-btn show-chat-from-preview" onClick={() => setIsChatOpen(true)} title="대화창 열기">
+                  <MessageSquare size={16} /> 대화창 열기
+                </button>
+              )}
               <button 
                 className={`tab-btn ${activeTab === 'preview' ? 'active' : ''}`}
                 onClick={() => setActiveTab('preview')}
