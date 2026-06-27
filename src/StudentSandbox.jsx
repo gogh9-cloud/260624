@@ -70,11 +70,6 @@ function StudentSandbox() {
         setHasAgreedToGuidelines(false);
       }
 
-      const savedCount = localStorage.getItem(`user_violation_count_${userProfile.email}`);
-      const savedBan = localStorage.getItem(`user_is_banned_${userProfile.email}`);
-      setViolationCount(savedCount ? parseInt(savedCount, 10) : 0);
-      setIsBanned(savedBan === 'true');
-
       const storageKey = `sandbox_sessions_${userProfile.email}`;
       const savedData = localStorage.getItem(storageKey);
       
@@ -100,7 +95,9 @@ function StudentSandbox() {
                id: Date.now().toString(),
                title: title,
                messages: oldData.savedMessages,
-               htmlCode: oldData.savedHtml || defaultHtml
+               htmlCode: oldData.savedHtml || defaultHtml,
+               violationCount: 0,
+               isBanned: false
              }];
              localStorage.removeItem(oldStorageKey);
           }
@@ -113,18 +110,24 @@ function StudentSandbox() {
         setCurrentSessionId(current.id);
         setMessages(current.messages);
         setHtmlCode(current.htmlCode || defaultHtml);
+        setViolationCount(current.violationCount || 0);
+        setIsBanned(current.isBanned || false);
       } else {
         const newSessionId = Date.now().toString();
         const initialSession = {
           id: newSessionId,
           title: '새 채팅',
           messages: defaultMessages,
-          htmlCode: defaultHtml
+          htmlCode: defaultHtml,
+          violationCount: 0,
+          isBanned: false
         };
         setSessions([initialSession]);
         setCurrentSessionId(newSessionId);
         setMessages(defaultMessages);
         setHtmlCode(defaultHtml);
+        setViolationCount(0);
+        setIsBanned(false);
       }
     }
   }, [isLoggedIn, userProfile]);
@@ -143,7 +146,14 @@ function StudentSandbox() {
                      newTitle = firstUserMsg.text.substring(0, 15) + (firstUserMsg.text.length > 15 ? '...' : '');
                    }
                 }
-                updatedSession = { ...s, title: newTitle, messages, htmlCode };
+                updatedSession = { 
+                  ...s, 
+                  title: newTitle, 
+                  messages, 
+                  htmlCode,
+                  violationCount,
+                  isBanned
+                };
                 return updatedSession;
              }
              return s;
@@ -171,7 +181,7 @@ function StudentSandbox() {
        });
     }
     scrollToBottom();
-  }, [messages, htmlCode, currentSessionId, isLoggedIn, userProfile]);
+  }, [messages, htmlCode, currentSessionId, isLoggedIn, userProfile, violationCount, isBanned]);
 
   const handleNewChat = () => {
     if (abortControllerRef.current) {
@@ -188,12 +198,16 @@ function StudentSandbox() {
       id: newSessionId,
       title: '새 채팅',
       messages: defaultMessages,
-      htmlCode: defaultHtml
+      htmlCode: defaultHtml,
+      violationCount: 0,
+      isBanned: false
     };
     setSessions(prev => [newSession, ...prev]);
     setCurrentSessionId(newSessionId);
     setMessages(defaultMessages);
     setHtmlCode(defaultHtml);
+    setViolationCount(0);
+    setIsBanned(false);
   };
 
   const handleSwitchSession = (sessionId) => {
@@ -213,6 +227,8 @@ function StudentSandbox() {
       setCurrentSessionId(sessionId);
       setMessages(session.messages);
       setHtmlCode(session.htmlCode || defaultHtml);
+      setViolationCount(session.violationCount || 0);
+      setIsBanned(session.isBanned || false);
     }
   };
 
@@ -423,12 +439,10 @@ function StudentSandbox() {
         }
       }
 
-      if (hasWarning && userProfile?.email) {
-        localStorage.setItem(`user_violation_count_${userProfile.email}`, '1');
+      if (hasWarning) {
         setViolationCount(1);
       }
-      if (hasBan && userProfile?.email) {
-        localStorage.setItem(`user_is_banned_${userProfile.email}`, 'true');
+      if (hasBan) {
         setIsBanned(true);
       }
 
@@ -734,7 +748,7 @@ function StudentSandbox() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={isBanned ? "비속어 반복 사용으로 인해 사용이 영구 중지되었습니다. 선생님께 문의해 주세요." : "튜터에게 궁금한 걸 물어보거나 코딩을 부탁해 봐!"}
+              placeholder={isBanned ? "비속어 반복 사용으로 인해 이 채팅방의 대화가 종료되었습니다. 새 채팅을 시작해 주세요." : "튜터에게 궁금한 걸 물어보거나 코딩을 부탁해 봐!"}
               disabled={isLoading || isBanned}
             />
             <button 
