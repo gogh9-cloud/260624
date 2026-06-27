@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const config = {
-  runtime: 'edge',
+  maxDuration: 300,
 };
 
 export default async function handler(req) {
