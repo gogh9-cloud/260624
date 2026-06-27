@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const config = {
   maxDuration: 300,
+  supportsResponseStreaming: true,
 };
 
 export default async function handler(req) {
