@@ -426,7 +426,7 @@ function StudentSandbox() {
   const isQ2Correct = guidelineAnswers.q2.trim() === '생각';
   const isQ3Correct = guidelineAnswers.q3.trim() === '틀릴';
   const isQ4Correct = guidelineAnswers.q4.trim().replace(/\s+/g, '') === '내생각';
-  const isQ5Correct = guidelineAnswers.q5.trim() === '비밀';
+  const isQ5Correct = guidelineAnswers.q5.trim().replace(/\s+/g, '') === '나의정보';
   const isQ6Correct = guidelineAnswers.q6.trim() === '정직';
   const isAllCorrect = isQ1Correct && isQ2Correct && isQ3Correct && isQ4Correct && isQ5Correct && isQ6Correct;
 
@@ -483,7 +483,7 @@ function StudentSandbox() {
                   <input type="checkbox" checked={isQ5Correct} readOnly />
                 </div>
                 <p>
-                  나의 정보와 <input type="text" className="guideline-input" value={guidelineAnswers.q5} onChange={(e) => handleGuidelineChange('q5', e.target.value)} maxLength={5} placeholder="비밀" />을(를) 말하지 않아요.
+                  <input type="text" className="guideline-input" style={{width: '90px'}} value={guidelineAnswers.q5} onChange={(e) => handleGuidelineChange('q5', e.target.value)} maxLength={6} placeholder="나의 정보" />와(과) 비밀을 말하지 않아요.
                 </p>
               </li>
               <li className={isQ6Correct ? 'correct' : ''}>
