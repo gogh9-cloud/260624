@@ -344,7 +344,13 @@ function StudentSandbox() {
         const { value, done } = await reader.read();
         if (done) break;
         if (value) {
-          aiText += decoder.decode(value, { stream: true });
+          const chunkText = decoder.decode(value, { stream: true });
+          if (chunkText.includes('[API_ERROR:')) {
+            const errorMatch = chunkText.match(/\[API_ERROR:\s*([\s\S]*?)\]/);
+            const errMsg = errorMatch ? errorMatch[1] : "인공지능 서비스 연결 중 내부 문제가 발생했습니다.";
+            throw new Error(errMsg);
+          }
+          aiText += chunkText;
           setMessages(prev => prev.map(msg => 
             msg.id === aiMessageId ? { ...msg, text: aiText } : msg
           ));
@@ -378,11 +384,14 @@ function StudentSandbox() {
 
     } catch (error) {
       console.error("Failed to fetch AI response:", error);
-      setMessages(prev => [...prev, {
-        id: Date.now() + 1,
-        sender: 'ai',
-        text: `앗, 오류가 발생했어. (에러 원인: ${error.message})`
-      }]);
+      setMessages(prev => {
+        const cleanMessages = prev.filter(msg => msg.id !== aiMessageId);
+        return [...cleanMessages, {
+          id: Date.now() + 1,
+          sender: 'ai',
+          text: `앗, 오류가 발생했어. (에러 원인: ${error.message})`
+        }];
+      });
     } finally {
       clearTimeout(loadingTimer);
       clearTimeout(loadingTimer2);
