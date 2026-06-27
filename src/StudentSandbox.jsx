@@ -32,7 +32,9 @@ function StudentSandbox() {
   const [editTitleValue, setEditTitleValue] = useState('');
   const [isCopied, setIsCopied] = useState(false);
   const [hasAgreedToGuidelines, setHasAgreedToGuidelines] = useState(false);
-  const [isGuidelineChecked, setIsGuidelineChecked] = useState(false);
+  const [guidelineAnswers, setGuidelineAnswers] = useState({
+    q1: '', q2: '', q3: '', q4: '', q5: '', q6: ''
+  });
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -416,55 +418,90 @@ function StudentSandbox() {
     setHasAgreedToGuidelines(true);
   };
 
+  const handleGuidelineChange = (q, value) => {
+    setGuidelineAnswers(prev => ({ ...prev, [q]: value }));
+  };
+
+  const isQ1Correct = guidelineAnswers.q1.trim() === '왜';
+  const isQ2Correct = guidelineAnswers.q2.trim() === '생각';
+  const isQ3Correct = guidelineAnswers.q3.trim() === '틀릴';
+  const isQ4Correct = guidelineAnswers.q4.trim() === '키워요';
+  const isQ5Correct = guidelineAnswers.q5.trim() === '비밀';
+  const isQ6Correct = guidelineAnswers.q6.trim() === '정직';
+  const isAllCorrect = isQ1Correct && isQ2Correct && isQ3Correct && isQ4Correct && isQ5Correct && isQ6Correct;
+
   return (
     <div className="app-container">
       {/* 가이드라인 모달 */}
       {isLoggedIn && !hasAgreedToGuidelines && (
         <div className="guideline-modal-overlay">
-          <div className="guideline-modal-content glass">
+          <div className="guideline-modal-content">
             <h2>생성형 AI 활용 가이드 🌟</h2>
-            <p className="guideline-intro">본격적인 바이브 코딩을 시작하기 전에 아래 약속을 꼭 읽고 지켜주세요!</p>
+            <p className="guideline-intro">선생님이 보여주시는 화면을 보고 빈칸을 올바르게 채워주세요!</p>
             <ul className="guideline-list">
-              <li>
-                <strong>1. 활용 목적</strong>
-                <p>생성형 AI를 쓰기 전, '왜' 쓰는지 말할 수 있어야 해요.</p>
+              <li className={isQ1Correct ? 'correct' : ''}>
+                <div className="guideline-item-header">
+                  <input type="checkbox" checked={isQ1Correct} readOnly />
+                  <strong>1. 활용 목적</strong>
+                </div>
+                <p>
+                  생성형 AI를 쓰기 전, '
+                  <input type="text" className="guideline-input" value={guidelineAnswers.q1} onChange={(e) => handleGuidelineChange('q1', e.target.value)} maxLength={5} />
+                  ' 쓰는지 말할 수 있어야 해요.
+                </p>
               </li>
-              <li>
-                <strong>2. 주도적 학습</strong>
-                <p>생성형 AI에게 물어보기 전, 내 생각을 먼저 말해요.</p>
+              <li className={isQ2Correct ? 'correct' : ''}>
+                <div className="guideline-item-header">
+                  <input type="checkbox" checked={isQ2Correct} readOnly />
+                  <strong>2. 주도적 학습</strong>
+                </div>
+                <p>
+                  생성형 AI에게 물어보기 전, 내 <input type="text" className="guideline-input" value={guidelineAnswers.q2} onChange={(e) => handleGuidelineChange('q2', e.target.value)} maxLength={5} />을(를) 먼저 말해요.
+                </p>
               </li>
-              <li>
-                <strong>3. 비판적 검증</strong>
-                <p>생성형 AI가 틀릴 수 있다는 점을 알아요.</p>
+              <li className={isQ3Correct ? 'correct' : ''}>
+                <div className="guideline-item-header">
+                  <input type="checkbox" checked={isQ3Correct} readOnly />
+                  <strong>3. 비판적 검증</strong>
+                </div>
+                <p>
+                  생성형 AI가 <input type="text" className="guideline-input" value={guidelineAnswers.q3} onChange={(e) => handleGuidelineChange('q3', e.target.value)} maxLength={5} /> 수 있다는 점을 알아요.
+                </p>
               </li>
-              <li>
-                <strong>4. 사고의 확장</strong>
-                <p>생성형 AI와 함께 상상하며 내 생각을 더 크게 키워요.</p>
+              <li className={isQ4Correct ? 'correct' : ''}>
+                <div className="guideline-item-header">
+                  <input type="checkbox" checked={isQ4Correct} readOnly />
+                  <strong>4. 사고의 확장</strong>
+                </div>
+                <p>
+                  생성형 AI와 함께 상상하며 내 생각을 더 크게 <input type="text" className="guideline-input" value={guidelineAnswers.q4} onChange={(e) => handleGuidelineChange('q4', e.target.value)} maxLength={5} />.
+                </p>
               </li>
-              <li>
-                <strong>5. 안전과 관계</strong>
-                <p>나의 정보와 비밀을 말하지 않아요.</p>
+              <li className={isQ5Correct ? 'correct' : ''}>
+                <div className="guideline-item-header">
+                  <input type="checkbox" checked={isQ5Correct} readOnly />
+                  <strong>5. 안전과 관계</strong>
+                </div>
+                <p>
+                  나의 정보와 <input type="text" className="guideline-input" value={guidelineAnswers.q5} onChange={(e) => handleGuidelineChange('q5', e.target.value)} maxLength={5} />을(를) 말하지 않아요.
+                </p>
               </li>
-              <li>
-                <strong>6. 투명성·윤리</strong>
-                <p>생성형 AI의 도움을 받았다면 숨기지 않고 정직하게 이야기해요.</p>
+              <li className={isQ6Correct ? 'correct' : ''}>
+                <div className="guideline-item-header">
+                  <input type="checkbox" checked={isQ6Correct} readOnly />
+                  <strong>6. 투명성·윤리</strong>
+                </div>
+                <p>
+                  생성형 AI의 도움을 받았다면 숨기지 않고 <input type="text" className="guideline-input" value={guidelineAnswers.q6} onChange={(e) => handleGuidelineChange('q6', e.target.value)} maxLength={5} />하게 이야기해요.
+                </p>
               </li>
             </ul>
-            <div className="guideline-checkbox-wrapper">
-              <input 
-                type="checkbox" 
-                id="guideline-agree" 
-                checked={isGuidelineChecked}
-                onChange={(e) => setIsGuidelineChecked(e.target.checked)}
-              />
-              <label htmlFor="guideline-agree">위 가이드를 모두 읽고 이해했습니다.</label>
-            </div>
             <button 
               className="guideline-agree-btn" 
               onClick={handleAgreeGuidelines} 
-              disabled={!isGuidelineChecked}
+              disabled={!isAllCorrect}
             >
-              동의하고 시작하기
+              모두 확인하고 동의하기
             </button>
           </div>
         </div>
