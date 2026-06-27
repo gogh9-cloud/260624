@@ -4,7 +4,6 @@ export const config = {
   runtime: 'edge',
 };
 
-export const maxDuration = 60;
 export default async function handler(req) {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
@@ -100,3 +99,4 @@ HTML 코드 안에는 반드시 <style> 태그로 CSS를 넣고, 자바스크립
     });
   }
 }
+  
