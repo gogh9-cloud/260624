@@ -425,7 +425,7 @@ function StudentSandbox() {
   const isQ1Correct = guidelineAnswers.q1.trim() === '왜';
   const isQ2Correct = guidelineAnswers.q2.trim() === '생각';
   const isQ3Correct = guidelineAnswers.q3.trim() === '틀릴';
-  const isQ4Correct = guidelineAnswers.q4.trim() === '키워요';
+  const isQ4Correct = guidelineAnswers.q4.trim().replace(/\s+/g, '') === '내생각';
   const isQ5Correct = guidelineAnswers.q5.trim() === '비밀';
   const isQ6Correct = guidelineAnswers.q6.trim() === '정직';
   const isAllCorrect = isQ1Correct && isQ2Correct && isQ3Correct && isQ4Correct && isQ5Correct && isQ6Correct;
@@ -474,7 +474,7 @@ function StudentSandbox() {
                   <input type="checkbox" checked={isQ4Correct} readOnly />
                 </div>
                 <p>
-                  생성형 AI와 함께 상상하며 내 생각을 더 크게 <input type="text" className="guideline-input" value={guidelineAnswers.q4} onChange={(e) => handleGuidelineChange('q4', e.target.value)} maxLength={5} placeholder="키워요" />.
+                  생성형 AI와 함께 상상하며 <input type="text" className="guideline-input" style={{width: '80px'}} value={guidelineAnswers.q4} onChange={(e) => handleGuidelineChange('q4', e.target.value)} maxLength={6} placeholder="내 생각" />을(를) 더 크게 키워요.
                 </p>
               </li>
               <li className={isQ5Correct ? 'correct' : ''}>
