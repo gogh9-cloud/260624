@@ -322,7 +322,7 @@ function StudentSandbox() {
 
     // Timers to update loading text for long tasks
     loadingTimerRef.current = setTimeout(() => {
-      setLoadingText('코드가 조금 길어서 꼼꼼하게 작성하고 있어요... 🛠️');
+      setLoadingText('답변을 꼼꼼하게 작성하고 있어요... ✍️');
     }, 8000);
     
     loadingTimer2Ref.current = setTimeout(() => {
