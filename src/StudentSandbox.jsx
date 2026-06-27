@@ -43,6 +43,8 @@ function StudentSandbox() {
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState(null);
+  const [violationCount, setViolationCount] = useState(0);
+  const [isBanned, setIsBanned] = useState(false);
   const [editTitleValue, setEditTitleValue] = useState('');
   const [isCopied, setIsCopied] = useState(false);
   const [hasAgreedToGuidelines, setHasAgreedToGuidelines] = useState(false);
@@ -67,6 +69,11 @@ function StudentSandbox() {
       } else {
         setHasAgreedToGuidelines(false);
       }
+
+      const savedCount = localStorage.getItem(`user_violation_count_${userProfile.email}`);
+      const savedBan = localStorage.getItem(`user_is_banned_${userProfile.email}`);
+      setViolationCount(savedCount ? parseInt(savedCount, 10) : 0);
+      setIsBanned(savedBan === 'true');
 
       const storageKey = `sandbox_sessions_${userProfile.email}`;
       const savedData = localStorage.getItem(storageKey);
@@ -311,6 +318,7 @@ function StudentSandbox() {
   };
 
   const handleSend = async () => {
+    if (isBanned) return;
     if (!input.trim() || isLoading) return;
 
     if (abortControllerRef.current) {
@@ -347,8 +355,10 @@ function StudentSandbox() {
         headers: {
           'Content-Type': 'application/json',
         },
-        // Send history excluding the initial welcome message if needed, but sending all is fine
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ 
+          messages: newMessages,
+          violationCount: violationCount
+        }),
         signal: signal,
       });
 
@@ -377,6 +387,8 @@ function StudentSandbox() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
       let aiText = '';
+      let hasWarning = false;
+      let hasBan = false;
       
       const aiMessageId = Date.now() + 1;
       setMessages(prev => [...prev, { id: aiMessageId, sender: 'ai', text: '타이핑 중...' }]);
@@ -392,10 +404,32 @@ function StudentSandbox() {
             throw new Error(errMsg);
           }
           aiText += chunkText;
+
+          if (aiText.includes('[VIOLATION: WARNING]')) {
+            hasWarning = true;
+          }
+          if (aiText.includes('[VIOLATION: BAN]')) {
+            hasBan = true;
+          }
+
+          const displayText = aiText
+            .replace(/\[VIOLATION:\s*WARNING\]/g, '')
+            .replace(/\[VIOLATION:\s*BAN\]/g, '')
+            .trim();
+
           setMessages(prev => prev.map(msg => 
-            msg.id === aiMessageId ? { ...msg, text: aiText } : msg
+            msg.id === aiMessageId ? { ...msg, text: displayText || '타이핑 중...' } : msg
           ));
         }
+      }
+
+      if (hasWarning && userProfile?.email) {
+        localStorage.setItem(`user_violation_count_${userProfile.email}`, '1');
+        setViolationCount(1);
+      }
+      if (hasBan && userProfile?.email) {
+        localStorage.setItem(`user_is_banned_${userProfile.email}`, 'true');
+        setIsBanned(true);
       }
 
       // Parse markdown html block if it exists
@@ -621,7 +655,7 @@ function StudentSandbox() {
         
         {/* Sidebar Panel */}
         <aside className={`sidebar glass ${isSidebarOpen ? 'open' : 'closed'}`}>
-          <button className="new-chat-button" onClick={handleNewChat}>
+          <button className="new-chat-button" onClick={handleNewChat} disabled={isBanned}>
             <Plus size={18} /> 새 채팅
           </button>
           <div className="session-list">
@@ -700,13 +734,13 @@ function StudentSandbox() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="튜터에게 궁금한 걸 물어보거나 코딩을 부탁해 봐!"
-              disabled={isLoading}
+              placeholder={isBanned ? "비속어 반복 사용으로 인해 사용이 영구 중지되었습니다. 선생님께 문의해 주세요." : "튜터에게 궁금한 걸 물어보거나 코딩을 부탁해 봐!"}
+              disabled={isLoading || isBanned}
             />
             <button 
               className="send-button" 
               onClick={handleSend}
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || isBanned}
             >
               <Send size={20} />
             </button>

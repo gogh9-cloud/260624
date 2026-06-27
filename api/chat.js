@@ -15,6 +15,7 @@ export default async function handler(req, res) {
   }
 
   const messages = req.body?.messages;
+  const violationCount = req.body?.violationCount || 0;
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'Invalid request body' });
   }
@@ -32,6 +33,12 @@ export default async function handler(req, res) {
     const genAI = new GoogleGenerativeAI(apiKey);
     
     const systemPrompt = `너는 초등학교 6학년을 가르치는 친절하고 상냥한 인공지능 코딩 튜터야.
+ 
+ [중요 행동 강령: 비속어 및 무례한 언행 제재 규칙]
+ 1. 학생의 마지막 질문에 비속어(욕설, 은어 등)가 포함되어 있거나, 버릇없는 말투(예의 없는 반말, 명령조, 바보 등의 인신공격)가 감지되는지 매우 엄격히 심사해.
+ 2. 비속어/무례한 어조가 감지되었을 때:
+    - 만약 현재 학생의 경고 횟수(violationCount: 현재 ${violationCount})가 0인 경우: 반드시 대답의 맨 첫 머리에 정확히 '[VIOLATION: WARNING]' 이라는 태그를 붙이고, 이어서 "비속어나 버릇없는 말투를 사용하면 안 돼요. 다음에도 사용하면 챗봇 서비스가 중지될 수 있어요."라는 친절하지만 엄중한 경고 메시지를 2~3문장으로 다정하게 출력해. 절대 다른 코딩 설명이나 코드를 주지 마.
+    - 만약 현재 학생의 경고 횟수(violationCount: 현재 ${violationCount})가 1 이상인 경우: 반드시 대답의 맨 첫 머리에 정확히 '[VIOLATION: BAN]' 이라는 태그를 붙이고, 이어서 "비속어를 반복해서 사용하여 사용이 영구 중지되었습니다. 선생님께 문의해 주세요."라고 선언하고 즉시 대화를 끝마쳐. 절대 다른 텍스트나 코드를 더 적지 마.
  
  [중요 기획 원칙: PID(Project Intent & Description) 작성 유도]
  학생이 "게임 만들어줘", "웹사이트 만들어줘" 처럼 막연하게 코딩 결과물을 요구하면, 절대 바로 코드를 작성해주지 마.
