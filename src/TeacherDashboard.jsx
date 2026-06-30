@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, ArrowLeft, Users, MonitorPlay, MessageSquare, Clock } from 'lucide-react';
+import { Sparkles, ArrowLeft, Users, MonitorPlay, MessageSquare, Clock, Trash2 } from 'lucide-react';
 import './App.css';
 
 const getNowTimestamp = () => Date.now();
@@ -59,7 +59,8 @@ function TeacherDashboard() {
         id: 'metadata',
         sender: 'metadata',
         isBanned: false,
-        violationCount: 0
+        violationCount: 0,
+        banmalCount: 0
       }
     ];
 
@@ -93,6 +94,33 @@ function TeacherDashboard() {
     } catch (e) {
       console.error('Unban exception:', e);
       alert('정지 해제 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleDeleteSession = async (e, session) => {
+    e.stopPropagation();
+    if (!window.confirm(`${session.student_name} 학생의 '${session.title || '새 채팅'}' 세션을 삭제하시겠습니까?\n삭제 시 학생의 PC에서도 해당 세션이 삭제됩니다.`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('student_sessions')
+        .delete()
+        .eq('session_id', session.session_id)
+        .eq('student_email', session.student_email);
+
+      if (error) {
+        console.error('Delete session error:', error);
+        alert(`세션 삭제에 실패했습니다. (에러: ${error.message})`);
+      } else {
+        alert('세션이 성공적으로 삭제되었습니다.');
+        if (selectedSession && selectedSession.session_id === session.session_id) {
+          setSelectedSession(null);
+        }
+        fetchSessions();
+      }
+    } catch (e) {
+      console.error('Delete session exception:', e);
+      alert('세션 삭제 중 오류가 발생했습니다.');
     }
   };
 
@@ -162,10 +190,31 @@ function TeacherDashboard() {
                         color: 'white', 
                         padding: '2px 6px', 
                         borderRadius: '4px', 
-                        marginLeft: 'auto',
+                        marginLeft: '4px',
                         fontWeight: 'bold'
                       }}>정지됨</span>
                     )}
+                    <button
+                      onClick={(e) => handleDeleteSession(e, session)}
+                      title="세션 삭제"
+                      style={{
+                        marginLeft: 'auto',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '4px',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.color = '#ef4444'}
+                      onMouseOut={(e) => e.currentTarget.style.color = '#94a3b8'}
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     <MessageSquare size={12} /> {session.title || '새 채팅'}

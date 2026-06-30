@@ -12,10 +12,10 @@ function StudentSandbox() {
     {
       id: 1,
       sender: 'ai',
-      text: '안녕! 궁금한 게 있으면 편하게 물어봐! 코딩도 도와줄 수 있어.'
+      text: '안녕하세요! 궁금한 점이 있으면 편하게 물어보세요! 코딩도 도와드릴 수 있어요.'
     }
   ];
-  const defaultHtml = '<div style="text-align: center; padding: 2rem; font-family: sans-serif; color: #333;">\n  <h1>안녕! 여기는 프리뷰 화면이야!</h1>\n  <p>왼쪽에서 대화로 코딩을 시작해봐.</p>\n</div>';
+  const defaultHtml = '<div style="text-align: center; padding: 2rem; font-family: sans-serif; color: #333;">\n  <h1>안녕하세요! 여기는 프리뷰 화면이에요!</h1>\n  <p>왼쪽에서 대화로 코딩을 시작해 보세요.</p>\n</div>';
 
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
@@ -23,7 +23,7 @@ function StudentSandbox() {
   const [input, setInput] = useState('');
   const [htmlCode, setHtmlCode] = useState(defaultHtml);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState('튜터가 생각 중이야... 💭');
+  const [loadingText, setLoadingText] = useState('튜터가 생각 중이에요... 💭');
   const [activeTab, setActiveTab] = useState('preview');
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return localStorage.getItem('user_profile') ? true : false;
@@ -44,6 +44,7 @@ function StudentSandbox() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [violationCount, setViolationCount] = useState(0);
+  const [banmalCount, setBanmalCount] = useState(0);
   const [isBanned, setIsBanned] = useState(false);
   const [editTitleValue, setEditTitleValue] = useState('');
   const [isCopied, setIsCopied] = useState(false);
@@ -97,6 +98,7 @@ function StudentSandbox() {
                messages: oldData.savedMessages,
                htmlCode: oldData.savedHtml || defaultHtml,
                violationCount: 0,
+               banmalCount: 0,
                isBanned: false
              }];
              localStorage.removeItem(oldStorageKey);
@@ -113,6 +115,7 @@ function StudentSandbox() {
         setMessages(current.messages);
         setHtmlCode(current.htmlCode || defaultHtml);
         setViolationCount(current.violationCount || 0);
+        setBanmalCount(current.banmalCount || 0);
         setIsBanned(current.isBanned || false);
       } else {
         const newSessionId = Date.now().toString();
@@ -155,6 +158,7 @@ function StudentSandbox() {
                   messages, 
                   htmlCode,
                   violationCount,
+                  banmalCount,
                   isBanned
                 };
                 return updatedSession;
@@ -178,7 +182,8 @@ function StudentSandbox() {
                    id: 'metadata',
                    sender: 'metadata',
                    isBanned: isBanned,
-                   violationCount: violationCount
+                   violationCount: violationCount,
+                   banmalCount: banmalCount
                  }
                ],
                html_code: updatedSession.htmlCode,
@@ -192,7 +197,7 @@ function StudentSandbox() {
        });
     }
     scrollToBottom();
-  }, [messages, htmlCode, currentSessionId, isLoggedIn, userProfile, violationCount, isBanned]);
+  }, [messages, htmlCode, currentSessionId, isLoggedIn, userProfile, violationCount, banmalCount, isBanned]);
 
   // 3. 정지 상태일 때 Supabase를 주기적으로 폴링하여 정지 해제 여부 감지
   useEffect(() => {
@@ -217,6 +222,7 @@ function StudentSandbox() {
             if (metadata && metadata.isBanned === false) {
               setIsBanned(false);
               setViolationCount(0);
+              setBanmalCount(0);
               
               const cleanMessages = data.messages.filter(m => m.sender !== 'metadata');
               setMessages(cleanMessages);
@@ -228,7 +234,8 @@ function StudentSandbox() {
                       ...s,
                       messages: cleanMessages,
                       isBanned: false,
-                      violationCount: 0
+                      violationCount: 0,
+                      banmalCount: 0
                     };
                   }
                   return s;
@@ -248,6 +255,83 @@ function StudentSandbox() {
     };
   }, [isBanned, isLoggedIn, userProfile, currentSessionId]);
 
+  // 4. 교사가 대시보드에서 세션을 삭제했는지 주기적으로 감지하여 동기화
+  useEffect(() => {
+    let intervalId;
+    if (isLoggedIn && userProfile?.email && sessions.length > 0) {
+      intervalId = setInterval(async () => {
+        try {
+          const { data, error } = await supabase
+            .from('student_sessions')
+            .select('session_id')
+            .eq('student_email', userProfile.email);
+
+          if (error) {
+            console.error("Error checking active sessions:", error);
+            return;
+          }
+
+          if (data) {
+            const activeDbIds = new Set(data.map(row => row.session_id));
+            let hasChanges = false;
+            
+            const updatedSessions = sessions.filter(session => {
+              const dbExists = activeDbIds.has(session.id);
+              const isRecent = Date.now() - Number(session.id) < 15000;
+              
+              if (!dbExists && !isRecent) {
+                hasChanges = true;
+                return false; // Remove this session as it was deleted by the teacher
+              }
+              return true;
+            });
+
+            if (hasChanges) {
+              if (updatedSessions.length === 0) {
+                // If all sessions are deleted, create a new one
+                const newSessionId = Date.now().toString();
+                const newSession = {
+                  id: newSessionId,
+                  title: '새 채팅',
+                  messages: defaultMessages,
+                  htmlCode: defaultHtml,
+                  violationCount: 0,
+                  banmalCount: 0,
+                  isBanned: false
+                };
+                setSessions([newSession]);
+                setCurrentSessionId(newSessionId);
+                setMessages(defaultMessages);
+                setHtmlCode(defaultHtml);
+                setViolationCount(0);
+                setBanmalCount(0);
+                setIsBanned(false);
+              } else {
+                setSessions(updatedSessions);
+                // If current session was deleted, switch to the first remaining one
+                if (!updatedSessions.some(s => s.id === currentSessionId)) {
+                  const nextSession = updatedSessions[0];
+                  setCurrentSessionId(nextSession.id);
+                  setMessages(nextSession.messages);
+                  setHtmlCode(nextSession.htmlCode || defaultHtml);
+                  setViolationCount(nextSession.violationCount || 0);
+                  setBanmalCount(nextSession.banmalCount || 0);
+                  setIsBanned(nextSession.isBanned || false);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error in sync deleted sessions:", e);
+        }
+      }, 5000);
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, userProfile, sessions, currentSessionId]);
+
   const handleNewChat = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -256,7 +340,7 @@ function StudentSandbox() {
     clearTimeout(loadingTimerRef.current);
     clearTimeout(loadingTimer2Ref.current);
     setIsLoading(false);
-    setLoadingText('튜터가 생각 중이야... 💭');
+    setLoadingText('튜터가 생각 중이에요... 💭');
 
     const newSessionId = Date.now().toString();
     const newSession = {
@@ -265,6 +349,7 @@ function StudentSandbox() {
       messages: defaultMessages,
       htmlCode: defaultHtml,
       violationCount: 0,
+      banmalCount: 0,
       isBanned: false
     };
     setSessions(prev => [newSession, ...prev]);
@@ -272,6 +357,7 @@ function StudentSandbox() {
     setMessages(defaultMessages);
     setHtmlCode(defaultHtml);
     setViolationCount(0);
+    setBanmalCount(0);
     setIsBanned(false);
   };
 
@@ -285,7 +371,7 @@ function StudentSandbox() {
     clearTimeout(loadingTimerRef.current);
     clearTimeout(loadingTimer2Ref.current);
     setIsLoading(false);
-    setLoadingText('튜터가 생각 중이야... 💭');
+    setLoadingText('튜터가 생각 중이에요... 💭');
 
     const session = sessions.find(s => s.id === sessionId);
     if (session) {
@@ -293,6 +379,7 @@ function StudentSandbox() {
       setMessages(session.messages);
       setHtmlCode(session.htmlCode || defaultHtml);
       setViolationCount(session.violationCount || 0);
+      setBanmalCount(session.banmalCount || 0);
       setIsBanned(session.isBanned || false);
     }
   };
@@ -352,7 +439,8 @@ function StudentSandbox() {
                    id: 'metadata',
                    sender: 'metadata',
                    isBanned: isBanned,
-                   violationCount: violationCount
+                   violationCount: violationCount,
+                   banmalCount: banmalCount
                  }
                ],
                html_code: updatedSession.htmlCode,
@@ -427,7 +515,7 @@ function StudentSandbox() {
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
-    setLoadingText('튜터가 생각 중이야... 💭');
+    setLoadingText('튜터가 생각 중이에요... 💭');
 
     // Timers to update loading text for long tasks
     loadingTimerRef.current = setTimeout(() => {
@@ -447,7 +535,8 @@ function StudentSandbox() {
         },
         body: JSON.stringify({ 
           messages: newMessages,
-          violationCount: violationCount
+          violationCount: violationCount,
+          banmalCount: banmalCount
         }),
         signal: signal,
       });
@@ -479,6 +568,7 @@ function StudentSandbox() {
       let aiText = '';
       let hasWarning = false;
       let hasBan = false;
+      let detectedBanmalCount = null;
       
       aiMessageId = Date.now() + 1;
       setMessages(prev => [...prev, { id: aiMessageId, sender: 'ai', text: '타이핑 중...' }]);
@@ -501,10 +591,17 @@ function StudentSandbox() {
           if (aiText.includes('[VIOLATION: BAN]')) {
             hasBan = true;
           }
+          if (aiText.includes('[BANMAL_DETECTED: 1]')) {
+            detectedBanmalCount = 1;
+          }
+          if (aiText.includes('[BANMAL_DETECTED: 2]')) {
+            detectedBanmalCount = 2;
+          }
 
           const displayText = aiText
             .replace(/\[VIOLATION:\s*WARNING\]/g, '')
             .replace(/\[VIOLATION:\s*BAN\]/g, '')
+            .replace(/\[BANMAL_DETECTED:\s*\d+\]/g, '')
             .trim();
 
           setMessages(prev => prev.map(msg => 
@@ -518,6 +615,9 @@ function StudentSandbox() {
       }
       if (hasBan) {
         setIsBanned(true);
+      }
+      if (detectedBanmalCount !== null) {
+        setBanmalCount(detectedBanmalCount);
       }
 
       // Parse markdown html block if it exists
@@ -537,7 +637,7 @@ function StudentSandbox() {
         // Remove the code block from the text shown in the chat
         aiText = aiText.replace(match[0], '').trim();
         if (!aiText) {
-          aiText = '오른쪽 프리뷰 화면에 네가 요청한 코드를 만들어 두었어! 확인해 봐.';
+          aiText = '오른쪽 프리뷰 화면에 요청하신 코드를 만들어 두었어요! 확인해 보세요.';
         }
         // Update the message one last time without the code block
         setMessages(prev => prev.map(msg => 
@@ -556,7 +656,7 @@ function StudentSandbox() {
         return [...cleanMessages, {
           id: Date.now() + 1,
           sender: 'ai',
-          text: `앗, 오류가 발생했어. (에러 원인: ${error.message})`
+          text: `앗, 오류가 발생했어요. (에러 원인: ${error.message})`
         }];
       });
     } finally {
@@ -822,7 +922,7 @@ function StudentSandbox() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={isBanned ? "비속어 반복 사용으로 인해 이 채팅방의 대화가 종료되었습니다. 새 채팅을 시작해 주세요." : "튜터에게 궁금한 걸 물어보거나 코딩을 부탁해 봐!"}
+              placeholder={isBanned ? "비속어 반복 사용으로 인해 이 채팅방의 대화가 종료되었습니다. 새 채팅을 시작해 주세요." : "튜터에게 궁금한 점을 질문하거나 코딩을 부탁해 보세요!"}
               disabled={isLoading || isBanned}
             />
             <button 
