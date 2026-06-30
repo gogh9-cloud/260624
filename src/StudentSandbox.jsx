@@ -33,7 +33,7 @@ function StudentSandbox() {
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch (e) {
+      } catch {
         return null;
       }
     }
@@ -101,7 +101,9 @@ function StudentSandbox() {
              }];
              localStorage.removeItem(oldStorageKey);
           }
-        } catch(e) {}
+        } catch {
+          // ignore error
+        }
       }
 
       if (loadedSessions.length > 0) {
@@ -130,6 +132,7 @@ function StudentSandbox() {
         setIsBanned(false);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, userProfile]);
 
   // 2. 데이터 변경 시 자동 저장 로직
@@ -169,7 +172,15 @@ function StudentSandbox() {
                student_email: userProfile.email,
                student_name: userProfile.name,
                title: updatedSession.title,
-               messages: updatedSession.messages,
+               messages: [
+                 ...updatedSession.messages,
+                 {
+                   id: 'metadata',
+                   sender: 'metadata',
+                   isBanned: isBanned,
+                   violationCount: violationCount
+                 }
+               ],
                html_code: updatedSession.htmlCode,
                updated_at: new Date().toISOString()
              }, { onConflict: 'student_email, session_id' }).then(({ error }) => {
@@ -182,6 +193,60 @@ function StudentSandbox() {
     }
     scrollToBottom();
   }, [messages, htmlCode, currentSessionId, isLoggedIn, userProfile, violationCount, isBanned]);
+
+  // 3. 정지 상태일 때 Supabase를 주기적으로 폴링하여 정지 해제 여부 감지
+  useEffect(() => {
+    let intervalId;
+    if (isBanned && isLoggedIn && userProfile?.email && currentSessionId) {
+      intervalId = setInterval(async () => {
+        try {
+          const { data, error } = await supabase
+            .from('student_sessions')
+            .select('messages')
+            .eq('student_email', userProfile.email)
+            .eq('session_id', currentSessionId)
+            .maybeSingle();
+
+          if (error) {
+            console.error("Polling error fetching session:", error);
+            return;
+          }
+
+          if (data && data.messages) {
+            const metadata = data.messages.find(m => m.sender === 'metadata');
+            if (metadata && metadata.isBanned === false) {
+              setIsBanned(false);
+              setViolationCount(0);
+              
+              const cleanMessages = data.messages.filter(m => m.sender !== 'metadata');
+              setMessages(cleanMessages);
+              
+              setSessions(prev => {
+                const updated = prev.map(s => {
+                  if (s.id === currentSessionId) {
+                    return {
+                      ...s,
+                      messages: cleanMessages,
+                      isBanned: false,
+                      violationCount: 0
+                    };
+                  }
+                  return s;
+                });
+                localStorage.setItem(`sandbox_sessions_${userProfile.email}`, JSON.stringify(updated));
+                return updated;
+              });
+            }
+          }
+        } catch (e) {
+          console.error("Error in check unban polling:", e);
+        }
+      }, 3000);
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isBanned, isLoggedIn, userProfile, currentSessionId]);
 
   const handleNewChat = () => {
     if (abortControllerRef.current) {
@@ -281,7 +346,15 @@ function StudentSandbox() {
                student_email: userProfile.email,
                student_name: userProfile.name,
                title: updatedSession.title,
-               messages: updatedSession.messages,
+               messages: [
+                 ...updatedSession.messages,
+                 {
+                   id: 'metadata',
+                   sender: 'metadata',
+                   isBanned: isBanned,
+                   violationCount: violationCount
+                 }
+               ],
                html_code: updatedSession.htmlCode,
                updated_at: new Date().toISOString()
              }, { onConflict: 'student_email, session_id' }).catch(console.error);
@@ -365,6 +438,7 @@ function StudentSandbox() {
       setLoadingText('거의 다 완성되어 가요. 조금만 더 기다려 주세요! 🚀');
     }, 18000);
 
+    let aiMessageId = null;
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -392,7 +466,7 @@ function StudentSandbox() {
             } else if (parsed.error) {
               errorMsg = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
             }
-          } catch(e) {
+          } catch {
             errorMsg = `서버 오류(${response.status}): ${rawText.substring(0, 100)}`;
           }
         }
@@ -406,7 +480,7 @@ function StudentSandbox() {
       let hasWarning = false;
       let hasBan = false;
       
-      const aiMessageId = Date.now() + 1;
+      aiMessageId = Date.now() + 1;
       setMessages(prev => [...prev, { id: aiMessageId, sender: 'ai', text: '타이핑 중...' }]);
 
       while (true) {
@@ -669,7 +743,7 @@ function StudentSandbox() {
         
         {/* Sidebar Panel */}
         <aside className={`sidebar glass ${isSidebarOpen ? 'open' : 'closed'}`}>
-          <button className="new-chat-button" onClick={handleNewChat} disabled={isBanned}>
+          <button className="new-chat-button" onClick={handleNewChat}>
             <Plus size={18} /> 새 채팅
           </button>
           <div className="session-list">

@@ -1,3 +1,4 @@
+/* global process */
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const config = {

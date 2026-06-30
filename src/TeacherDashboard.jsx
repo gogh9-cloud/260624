@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Sparkles, ArrowLeft, Users, MonitorPlay, MessageSquare, Clock } from 'lucide-react';
 import './App.css';
 
+const getNowTimestamp = () => Date.now();
+
 function TeacherDashboard() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,7 +16,7 @@ function TeacherDashboard() {
     fetchSessions();
   }, []);
 
-  const fetchSessions = async () => {
+  async function fetchSessions() {
     setLoading(true);
     const { data, error } = await supabase
       .from('student_sessions')
@@ -28,7 +30,7 @@ function TeacherDashboard() {
       setSessions(data || []);
     }
     setLoading(false);
-  };
+  }
 
   const handleBack = () => {
     navigate('/');
@@ -37,6 +39,61 @@ function TeacherDashboard() {
   const formatDate = (dateString) => {
     const d = new Date(dateString);
     return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+  };
+
+  const handleUnban = async (session) => {
+    if (!window.confirm(`${session.student_name} 학생의 정지를 해제하시겠습니까?`)) return;
+
+    // Filter out the metadata message if it exists
+    const cleanMessages = (session.messages || []).filter(m => m.sender !== 'metadata');
+
+    // Append AI unban notice message and the updated metadata
+    const updatedMessages = [
+      ...cleanMessages,
+      {
+        id: getNowTimestamp(),
+        sender: 'ai',
+        text: '선생님께서 대화를 다시 할 수 있도록 허락해주셨어요! 앞으로는 고운 말을 사용해 주세요. 😊'
+      },
+      {
+        id: 'metadata',
+        sender: 'metadata',
+        isBanned: false,
+        violationCount: 0
+      }
+    ];
+
+    try {
+      const { error } = await supabase
+        .from('student_sessions')
+        .update({
+          messages: updatedMessages,
+          updated_at: new Date().toISOString()
+        })
+        .eq('session_id', session.session_id)
+        .eq('student_email', session.student_email);
+
+      if (error) {
+        console.error('Unban error:', error);
+        alert(`정지 해제에 실패했습니다. (에러: ${error.message})`);
+      } else {
+        alert('정지가 성공적으로 해제되었습니다.');
+        
+        // Update selectedSession state immediately to reflect in UI
+        const updatedSessionObj = {
+          ...session,
+          messages: updatedMessages,
+          updated_at: new Date().toISOString()
+        };
+        setSelectedSession(updatedSessionObj);
+        
+        // Refresh session list
+        fetchSessions();
+      }
+    } catch (e) {
+      console.error('Unban exception:', e);
+      alert('정지 해제 중 오류가 발생했습니다.');
+    }
   };
 
   if (loading) {
@@ -74,25 +131,40 @@ function TeacherDashboard() {
         <aside className="sidebar glass dashboard-sidebar" style={{ width: '300px' }}>
           <h3 className="sidebar-title" style={{ padding: '0 12px', color: 'var(--text-muted)' }}>학생 활동 내역</h3>
           <div className="session-list">
-            {sessions.map(session => (
-              <div 
-                key={session.id} 
-                className={`session-item ${selectedSession?.id === session.id ? 'active' : ''}`}
-                onClick={() => setSelectedSession(session)}
-                style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                  <img src={`https://ui-avatars.com/api/?name=${session.student_name}&background=random`} alt="avatar" style={{ width: 24, height: 24, borderRadius: '50%' }} />
-                  <span className="session-title" style={{ fontWeight: 'bold', color: 'white' }}>{session.student_name}</span>
+            {sessions.map(session => {
+              const metadata = session.messages?.find(m => m.sender === 'metadata');
+              const isBanned = metadata ? metadata.isBanned : false;
+              return (
+                <div 
+                  key={session.id} 
+                  className={`session-item ${selectedSession?.id === session.id ? 'active' : ''}`}
+                  onClick={() => setSelectedSession(session)}
+                  style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                    <img src={`https://ui-avatars.com/api/?name=${session.student_name}&background=random`} alt="avatar" style={{ width: 24, height: 24, borderRadius: '50%' }} />
+                    <span className="session-title" style={{ fontWeight: 'bold', color: 'white' }}>{session.student_name}</span>
+                    {isBanned && (
+                      <span style={{ 
+                        fontSize: '0.7rem', 
+                        backgroundColor: '#ef4444', 
+                        color: 'white', 
+                        padding: '2px 6px', 
+                        borderRadius: '4px', 
+                        marginLeft: 'auto',
+                        fontWeight: 'bold'
+                      }}>정지됨</span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    <MessageSquare size={12} /> {session.title || '새 채팅'}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'gray' }}>
+                    <Clock size={12} /> {formatDate(session.updated_at)}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  <MessageSquare size={12} /> {session.title || '새 채팅'}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'gray' }}>
-                  <Clock size={12} /> {formatDate(session.updated_at)}
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {sessions.length === 0 && (
               <div style={{ padding: '20px', textAlign: 'center', color: 'gray' }}>
                 아직 기록된 학생 데이터가 없습니다.
@@ -106,17 +178,59 @@ function TeacherDashboard() {
           {selectedSession ? (
             <>
               <div className="chat-panel" style={{ flex: 1, borderRight: '1px solid var(--panel-border)', background: 'rgba(0,0,0,0.2)' }}>
-                <div className="preview-header">
-                  <h3 style={{ fontSize: '1rem', color: 'white', margin: 0 }}>
-                    대화 내역 ({selectedSession.student_name})
-                  </h3>
-                </div>
+                {(() => {
+                  const selectedMetadata = selectedSession.messages?.find(m => m.sender === 'metadata');
+                  const isSelectedBanned = selectedMetadata ? selectedMetadata.isBanned : false;
+                  return (
+                    <>
+                      <div className="preview-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <h3 style={{ fontSize: '1rem', color: 'white', margin: 0 }}>
+                          대화 내역 ({selectedSession.student_name})
+                        </h3>
+                        {isSelectedBanned && (
+                          <button 
+                            onClick={() => handleUnban(selectedSession)}
+                            style={{
+                              padding: '6px 12px',
+                              backgroundColor: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '0.8rem',
+                              fontWeight: 'bold',
+                              transition: 'background-color 0.2s',
+                            }}
+                            onMouseOver={(e) => e.target.style.backgroundColor = '#dc2626'}
+                            onMouseOut={(e) => e.target.style.backgroundColor = '#ef4444'}
+                          >
+                            정지 해제
+                          </button>
+                        )}
+                      </div>
+                      {isSelectedBanned && (
+                        <div style={{
+                          padding: '10px 16px',
+                          backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                          borderBottom: '1px solid rgba(239, 68, 68, 0.3)',
+                          color: '#fca5a5',
+                          fontSize: '0.85rem'
+                        }}>
+                          ⚠️ 이 학생은 비속어 반복 사용으로 인해 대화가 정지되었습니다.
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
                 <div className="message-list">
-                  {selectedSession.messages && selectedSession.messages.map((msg, idx) => (
-                    <div key={idx} className={`message ${msg.sender}`}>
-                      {msg.text}
-                    </div>
-                  ))}
+                  {selectedSession.messages && selectedSession.messages
+                    .filter(msg => msg.sender !== 'metadata')
+                    .map((msg, idx) => (
+                      <div key={idx} className={`message ${msg.sender}`}>
+                        {msg.text}
+                      </div>
+                    ))
+                  }
                 </div>
               </div>
               <div className="iframe-container" style={{ flex: 1.5 }}>
