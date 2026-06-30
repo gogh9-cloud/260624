@@ -133,7 +133,18 @@ function TeacherDashboard() {
           <div className="session-list">
             {sessions.map(session => {
               const metadata = session.messages?.find(m => m.sender === 'metadata');
-              const isBanned = metadata ? metadata.isBanned : false;
+              let isBanned = metadata ? metadata.isBanned : false;
+              
+              if (!metadata && session.messages && session.messages.length > 0) {
+                const lastAiMessage = [...session.messages].reverse().find(m => m.sender === 'ai');
+                if (lastAiMessage && (
+                  lastAiMessage.text.includes('영구 중지') || 
+                  lastAiMessage.text.includes('중지되었습니다') || 
+                  lastAiMessage.text.includes('선생님께 문의')
+                )) {
+                  isBanned = true;
+                }
+              }
               return (
                 <div 
                   key={session.id} 
@@ -180,7 +191,18 @@ function TeacherDashboard() {
               <div className="chat-panel" style={{ flex: 1, borderRight: '1px solid var(--panel-border)', background: 'rgba(0,0,0,0.2)' }}>
                 {(() => {
                   const selectedMetadata = selectedSession.messages?.find(m => m.sender === 'metadata');
-                  const isSelectedBanned = selectedMetadata ? selectedMetadata.isBanned : false;
+                  let isSelectedBanned = selectedMetadata ? selectedMetadata.isBanned : false;
+                  
+                  if (!selectedMetadata && selectedSession.messages && selectedSession.messages.length > 0) {
+                    const lastAiMessage = [...selectedSession.messages].reverse().find(m => m.sender === 'ai');
+                    if (lastAiMessage && (
+                      lastAiMessage.text.includes('영구 중지') || 
+                      lastAiMessage.text.includes('중지되었습니다') || 
+                      lastAiMessage.text.includes('선생님께 문의')
+                    )) {
+                      isSelectedBanned = true;
+                    }
+                  }
                   return (
                     <>
                       <div className="preview-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
