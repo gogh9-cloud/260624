@@ -199,61 +199,8 @@ function StudentSandbox() {
     scrollToBottom();
   }, [messages, htmlCode, currentSessionId, isLoggedIn, userProfile, violationCount, banmalCount, isBanned]);
 
-  // 3. 정지 상태일 때 Supabase를 주기적으로 폴링하여 정지 해제 여부 감지
-  useEffect(() => {
-    let intervalId;
-    if (isBanned && isLoggedIn && userProfile?.email && currentSessionId) {
-      intervalId = setInterval(async () => {
-        try {
-          const { data, error } = await supabase
-            .from('student_sessions')
-            .select('messages')
-            .eq('student_email', userProfile.email)
-            .eq('session_id', currentSessionId)
-            .maybeSingle();
-
-          if (error) {
-            console.error("Polling error fetching session:", error);
-            return;
-          }
-
-          if (data && data.messages) {
-            const metadata = data.messages.find(m => m.sender === 'metadata');
-            if (metadata && metadata.isBanned === false) {
-              setIsBanned(false);
-              setViolationCount(0);
-              setBanmalCount(0);
-              
-              const cleanMessages = data.messages.filter(m => m.sender !== 'metadata');
-              setMessages(cleanMessages);
-              
-              setSessions(prev => {
-                const updated = prev.map(s => {
-                  if (s.id === currentSessionId) {
-                    return {
-                      ...s,
-                      messages: cleanMessages,
-                      isBanned: false,
-                      violationCount: 0,
-                      banmalCount: 0
-                    };
-                  }
-                  return s;
-                });
-                localStorage.setItem(`sandbox_sessions_${userProfile.email}`, JSON.stringify(updated));
-                return updated;
-              });
-            }
-          }
-        } catch (e) {
-          console.error("Error in check unban polling:", e);
-        }
-      }, 3000);
-    }
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [isBanned, isLoggedIn, userProfile, currentSessionId]);
+  // 3. 정지 상태 폴링 제거 (정지 기능이 비활성화됨)
+  // 기존 check unban polling 이펙트는 제거되었습니다.
 
   // 4. 교사가 대시보드에서 세션을 삭제했는지 주기적으로 감지하여 동기화
   useEffect(() => {
@@ -567,7 +514,6 @@ function StudentSandbox() {
       const decoder = new TextDecoder("utf-8");
       let aiText = '';
       let hasWarning = false;
-      let hasBan = false;
       let detectedBanmalCount = null;
       
       aiMessageId = Date.now() + 1;
@@ -587,9 +533,6 @@ function StudentSandbox() {
 
           if (aiText.includes('[VIOLATION: WARNING]')) {
             hasWarning = true;
-          }
-          if (aiText.includes('[VIOLATION: BAN]')) {
-            hasBan = true;
           }
           if (aiText.includes('[BANMAL_DETECTED: 1]')) {
             detectedBanmalCount = 1;
@@ -611,10 +554,7 @@ function StudentSandbox() {
       }
 
       if (hasWarning) {
-        setViolationCount(1);
-      }
-      if (hasBan) {
-        setIsBanned(true);
+        setViolationCount(prev => prev + 1);
       }
       if (detectedBanmalCount !== null) {
         setBanmalCount(detectedBanmalCount);
@@ -922,13 +862,13 @@ function StudentSandbox() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={isBanned ? "비속어 반복 사용으로 인해 이 채팅방의 대화가 종료되었습니다. 새 채팅을 시작해 주세요." : "튜터에게 궁금한 점을 질문하거나 코딩을 부탁해 보세요!"}
-              disabled={isLoading || isBanned}
+              placeholder="튜터에게 궁금한 점을 질문하거나 코딩을 부탁해 보세요!"
+              disabled={isLoading}
             />
             <button 
               className="send-button" 
               onClick={handleSend}
-              disabled={!input.trim() || isLoading || isBanned}
+              disabled={!input.trim() || isLoading}
             >
               <Send size={20} />
             </button>

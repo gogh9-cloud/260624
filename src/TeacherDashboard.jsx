@@ -160,19 +160,7 @@ function TeacherDashboard() {
           <h3 className="sidebar-title" style={{ padding: '0 12px', color: 'var(--text-muted)' }}>학생 활동 내역</h3>
           <div className="session-list">
             {sessions.map(session => {
-              const metadata = session.messages?.find(m => m.sender === 'metadata');
-              let isBanned = metadata ? metadata.isBanned : false;
-              
-              if (!metadata && session.messages && session.messages.length > 0) {
-                const lastAiMessage = [...session.messages].reverse().find(m => m.sender === 'ai');
-                if (lastAiMessage && (
-                  lastAiMessage.text.includes('영구 중지') || 
-                  lastAiMessage.text.includes('중지되었습니다') || 
-                  lastAiMessage.text.includes('선생님께 문의')
-                )) {
-                  isBanned = true;
-                }
-              }
+              const isBanned = false; // 정지 기능이 비활성화됨
               return (
                 <div 
                   key={session.id} 
@@ -238,61 +226,11 @@ function TeacherDashboard() {
           {selectedSession ? (
             <>
               <div className="chat-panel" style={{ flex: 1, borderRight: '1px solid var(--panel-border)', background: 'rgba(0,0,0,0.2)' }}>
-                {(() => {
-                  const selectedMetadata = selectedSession.messages?.find(m => m.sender === 'metadata');
-                  let isSelectedBanned = selectedMetadata ? selectedMetadata.isBanned : false;
-                  
-                  if (!selectedMetadata && selectedSession.messages && selectedSession.messages.length > 0) {
-                    const lastAiMessage = [...selectedSession.messages].reverse().find(m => m.sender === 'ai');
-                    if (lastAiMessage && (
-                      lastAiMessage.text.includes('영구 중지') || 
-                      lastAiMessage.text.includes('중지되었습니다') || 
-                      lastAiMessage.text.includes('선생님께 문의')
-                    )) {
-                      isSelectedBanned = true;
-                    }
-                  }
-                  return (
-                    <>
-                      <div className="preview-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                        <h3 style={{ fontSize: '1rem', color: 'white', margin: 0 }}>
-                          대화 내역 ({selectedSession.student_name})
-                        </h3>
-                        {isSelectedBanned && (
-                          <button 
-                            onClick={() => handleUnban(selectedSession)}
-                            style={{
-                              padding: '6px 12px',
-                              backgroundColor: '#ef4444',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '0.8rem',
-                              fontWeight: 'bold',
-                              transition: 'background-color 0.2s',
-                            }}
-                            onMouseOver={(e) => e.target.style.backgroundColor = '#dc2626'}
-                            onMouseOut={(e) => e.target.style.backgroundColor = '#ef4444'}
-                          >
-                            정지 해제
-                          </button>
-                        )}
-                      </div>
-                      {isSelectedBanned && (
-                        <div style={{
-                          padding: '10px 16px',
-                          backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                          borderBottom: '1px solid rgba(239, 68, 68, 0.3)',
-                          color: '#fca5a5',
-                          fontSize: '0.85rem'
-                        }}>
-                          ⚠️ 이 학생은 비속어 반복 사용으로 인해 대화가 정지되었습니다.
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
+                  <div className="preview-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                    <h3 style={{ fontSize: '1rem', color: 'white', margin: 0 }}>
+                      대화 내역 ({selectedSession.student_name})
+                    </h3>
+                  </div>
                 <div className="message-list">
                   {selectedSession.messages && selectedSession.messages
                     .filter(msg => msg.sender !== 'metadata')
