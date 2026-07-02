@@ -108,6 +108,54 @@ function StudentSandbox() {
         }
       }
 
+      // Auto-heal / unban any banned sessions
+      let hasHealed = false;
+      loadedSessions = loadedSessions.map(session => {
+        const isBanned = session.isBanned || false;
+        const cleanMessages = (session.messages || []).filter(m => m.sender !== 'metadata');
+        const lastAiMsg = [...cleanMessages].reverse().find(m => m.sender === 'ai');
+        const hasBanMessage = lastAiMsg && (
+          lastAiMsg.text.includes('영구 중지') ||
+          lastAiMsg.text.includes('중지되었습니다') ||
+          lastAiMsg.text.includes('선생님께 문의')
+        );
+
+        if (isBanned || hasBanMessage) {
+          hasHealed = true;
+          // Filter out the metadata message and the ban message
+          const filteredMessages = cleanMessages.filter(m => {
+            if (m.sender === 'ai' && (
+              m.text.includes('영구 중지') ||
+              m.text.includes('중지되었습니다') ||
+              m.text.includes('선생님께 문의')
+            )) {
+              return false;
+            }
+            return true;
+          });
+
+          // Add the friendly unban message
+          filteredMessages.push({
+            id: Date.now(),
+            sender: 'ai',
+            text: '선생님께서 대화를 다시 할 수 있도록 허락해주셨어요! 앞으로는 고운 말을 사용해 주세요. 😊'
+          });
+
+          return {
+            ...session,
+            isBanned: false,
+            banmalCount: 0,
+            violationCount: 0,
+            messages: filteredMessages
+          };
+        }
+        return session;
+      });
+
+      if (hasHealed) {
+        localStorage.setItem(storageKey, JSON.stringify(loadedSessions));
+      }
+
       if (loadedSessions.length > 0) {
         setSessions(loadedSessions);
         const current = loadedSessions[0];
