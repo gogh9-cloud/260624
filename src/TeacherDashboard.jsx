@@ -10,6 +10,7 @@ function TeacherDashboard() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,7 +28,12 @@ function TeacherDashboard() {
       console.error('Error fetching sessions:', error);
       setSessions([]);
     } else {
-      setSessions(data || []);
+      const fetched = data || [];
+      setSessions(fetched);
+      
+      // Clean up selectedIds that are no longer in fetched list
+      const fetchedIds = new Set(fetched.map(s => s.id));
+      setSelectedIds(prev => prev.filter(id => fetchedIds.has(id)));
     }
     setLoading(false);
   }
@@ -116,10 +122,64 @@ function TeacherDashboard() {
         if (selectedSession && selectedSession.session_id === session.session_id) {
           setSelectedSession(null);
         }
+        // Remove from selectedIds state
+        setSelectedIds(prev => prev.filter(id => id !== session.id));
         fetchSessions();
       }
     } catch (e) {
       console.error('Delete session exception:', e);
+      alert('세션 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(sessions.map(s => s.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (e, sessionId) => {
+    if (e.target.checked) {
+      setSelectedIds(prev => [...prev, sessionId]);
+    } else {
+      setSelectedIds(prev => prev.filter(id => id !== sessionId));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    
+    if (!window.confirm(`선택한 ${selectedIds.length}개의 세션을 삭제하시겠습니까?\n삭제 시 해당 학생들의 PC에서도 세션이 삭제됩니다.`)) return;
+
+    try {
+      const sessionsToDelete = sessions.filter(s => selectedIds.includes(s.id));
+      
+      const promises = sessionsToDelete.map(s => 
+        supabase
+          .from('student_sessions')
+          .delete()
+          .eq('session_id', s.session_id)
+          .eq('student_email', s.student_email)
+      );
+
+      const results = await Promise.all(promises);
+      const errors = results.filter(r => r.error);
+
+      if (errors.length > 0) {
+        console.error('Some bulk deletes failed:', errors);
+        alert(`${errors.length}개의 세션 삭제에 실패했습니다.`);
+      } else {
+        alert('선택한 세션이 성공적으로 삭제되었습니다.');
+        if (selectedSession && selectedIds.includes(selectedSession.id)) {
+          setSelectedSession(null);
+        }
+        setSelectedIds([]);
+        fetchSessions();
+      }
+    } catch (e) {
+      console.error('Bulk delete exception:', e);
       alert('세션 삭제 중 오류가 발생했습니다.');
     }
   };
@@ -158,6 +218,64 @@ function TeacherDashboard() {
         {/* 학생 목록 사이드바 */}
         <aside className="sidebar glass dashboard-sidebar" style={{ width: '300px' }}>
           <h3 className="sidebar-title" style={{ padding: '0 12px', color: 'var(--text-muted)' }}>학생 활동 내역</h3>
+          
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            padding: '0 12px 12px 12px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            marginBottom: '8px',
+            gap: '8px'
+          }}>
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              color: 'var(--text-muted)'
+            }}>
+              <input 
+                type="checkbox" 
+                checked={sessions.length > 0 && selectedIds.length === sessions.length}
+                onChange={handleSelectAll}
+                style={{ cursor: 'pointer', accentColor: '#c084fc' }}
+              />
+              전체 선택
+            </label>
+            {selectedIds.length > 0 && (
+              <button
+                onClick={handleDeleteSelected}
+                style={{
+                  padding: '4px 8px',
+                  backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  borderRadius: '6px',
+                  color: '#fc8181',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontWeight: 'bold',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ef4444';
+                  e.currentTarget.style.color = 'white';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+                  e.currentTarget.style.color = '#fc8181';
+                }}
+              >
+                <Trash2 size={12} />
+                선택 삭제 ({selectedIds.length})
+              </button>
+            )}
+          </div>
+
           <div className="session-list">
             {sessions.map(session => {
               const metadata = session.messages?.find(m => m.sender === 'metadata');
@@ -181,6 +299,13 @@ function TeacherDashboard() {
                   style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(session.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => handleSelectOne(e, session.id)}
+                      style={{ cursor: 'pointer', accentColor: '#c084fc' }}
+                    />
                     <img src={`https://ui-avatars.com/api/?name=${session.student_name}&background=random`} alt="avatar" style={{ width: 24, height: 24, borderRadius: '50%' }} />
                     <span className="session-title" style={{ fontWeight: 'bold', color: 'white' }}>{session.student_name}</span>
                     {isBanned && (
