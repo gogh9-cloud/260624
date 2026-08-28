@@ -12,10 +12,10 @@ function StudentSandbox() {
     {
       id: 1,
       sender: 'ai',
-      text: '안녕하세요! 궁금한 점이 있으면 편하게 물어보세요! 코딩도 도와드릴 수 있어요.'
+      text: '안녕하세요! 궁금한 점이 있으면 편하게 물어보세요! 공부 질문(수학, 과학, 국어 등)이나 코딩도 모두 도와드릴 수 있어요. 😊'
     }
   ];
-  const defaultHtml = '<div style="text-align: center; padding: 2rem; font-family: sans-serif; color: #333;">\n  <h1>안녕하세요! 여기는 프리뷰 화면이에요!</h1>\n  <p>왼쪽에서 대화로 코딩을 시작해 보세요.</p>\n</div>';
+  const defaultHtml = '<div style="text-align: center; padding: 2rem; font-family: sans-serif; color: #333;">\n  <h1>안녕하세요! 여기는 프리뷰 화면이에요!</h1>\n  <p>왼쪽 대화창에서 학습 질문이나 코딩을 시작해 보세요.</p>\n</div>';
 
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
@@ -910,7 +910,7 @@ function StudentSandbox() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="튜터에게 궁금한 점을 질문하거나 코딩을 부탁해 보세요!"
+              placeholder="튜터에게 공부 궁금증(수학, 과학, 국어 등)을 질문하거나 코딩을 부탁해 보세요!"
               disabled={isLoading}
             />
             <button 
