@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Code, Play, LogOut, Trash2, Download, Plus, MessageSquare, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Edit2, LayoutDashboard, Copy, Check } from 'lucide-react';
+import { Send, Sparkles, Code, Play, LogOut, Trash2, Download, Plus, MessageSquare, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Edit2, LayoutDashboard, Copy, Check, Image as ImageIcon, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { GoogleLogin, googleLogout } from '@react-oauth/google';
@@ -12,7 +12,7 @@ function StudentSandbox() {
     {
       id: 1,
       sender: 'ai',
-      text: '안녕하세요! 궁금한 점이 있으면 편하게 물어보세요! 공부 질문(수학, 과학, 국어 등)이나 코딩도 모두 도와드릴 수 있어요. 😊'
+      text: '안녕하세요! 궁금한 점이 있으면 편하게 물어보세요! 공부 질문(수학, 과학, 국어 등)이나 코딩도 모두 도와드릴 수 있어요. 궁금한 이미지나 문제 스크린샷을 붙여넣기(Ctrl+V) 하거나 첨부해 보셔도 좋아요! 😊'
     }
   ];
   const defaultHtml = '<div style="text-align: center; padding: 2rem; font-family: sans-serif; color: #333;">\n  <h1>안녕하세요! 여기는 프리뷰 화면이에요!</h1>\n  <p>왼쪽 대화창에서 학습 질문이나 코딩을 시작해 보세요.</p>\n</div>';
@@ -21,6 +21,7 @@ function StudentSandbox() {
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [messages, setMessages] = useState(defaultMessages);
   const [input, setInput] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null); // { dataUrl, base64, mimeType }
   const [htmlCode, setHtmlCode] = useState(defaultHtml);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('튜터가 생각 중이에요... 💭');
@@ -56,6 +57,73 @@ function StudentSandbox() {
   const loadingTimerRef = useRef(null);
   const loadingTimer2Ref = useRef(null);
   const abortControllerRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const processImageFile = (file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 1024;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        const resizedDataUrl = canvas.toDataURL(mimeType, 0.85);
+        const base64Data = resizedDataUrl.split(',')[1];
+
+        setSelectedImage({
+          dataUrl: resizedDataUrl,
+          base64: base64Data,
+          mimeType: mimeType
+        });
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processImageFile(file);
+    }
+    e.target.value = '';
+  };
+
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          processImageFile(file);
+          break;
+        }
+      }
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -491,7 +559,7 @@ function StudentSandbox() {
 
   const handleSend = async () => {
     if (isBanned) return;
-    if (!input.trim() || isLoading) return;
+    if ((!input.trim() && !selectedImage) || isLoading) return;
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -502,15 +570,23 @@ function StudentSandbox() {
     const userMessage = {
       id: Date.now(),
       sender: 'user',
-      text: input.trim()
+      text: input.trim(),
+      ...(selectedImage ? {
+        image: {
+          data: selectedImage.base64,
+          mimeType: selectedImage.mimeType,
+          previewUrl: selectedImage.dataUrl
+        }
+      } : {})
     };
     
     // Add user message to state
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput('');
+    setSelectedImage(null);
     setIsLoading(true);
-    setLoadingText('튜터가 생각 중이에요... 💭');
+    setLoadingText('튜터가 이미지를 분석하고 생각 중이에요... 💭');
 
     // Timers to update loading text for long tasks
     loadingTimerRef.current = setTimeout(() => {
@@ -530,6 +606,7 @@ function StudentSandbox() {
         },
         body: JSON.stringify({ 
           messages: newMessages,
+          htmlCode: htmlCode,
           violationCount: violationCount,
           banmalCount: banmalCount
         }),
@@ -608,28 +685,41 @@ function StudentSandbox() {
         setBanmalCount(detectedBanmalCount);
       }
 
+      const rawAiText = aiText;
+
       // Parse markdown html block if it exists
       let htmlBlockRegex = /```[a-z]*\s*([\s\S]*?)```/i;
-      let match = aiText.match(htmlBlockRegex);
+      let match = rawAiText.match(htmlBlockRegex);
       
       if (!match) {
         // Fallback: AI might have forgotten the closing backticks at the end
         htmlBlockRegex = /```[a-z]*\s*([\s\S]*)$/i;
-        match = aiText.match(htmlBlockRegex);
+        match = rawAiText.match(htmlBlockRegex);
       }
 
       if (match && match[1]) {
         // Extract the HTML code and update the preview
         setHtmlCode(match[1].trim());
         setIsPreviewOpen(true);
-        // Remove the code block from the text shown in the chat
-        aiText = aiText.replace(match[0], '').trim();
-        if (!aiText) {
-          aiText = '오른쪽 프리뷰 화면에 요청하신 코드를 만들어 두었어요! 확인해 보세요.';
+        // Remove the code block from the text shown in the chat bubble
+        let displayText = rawAiText.replace(match[0], '').trim();
+        if (!displayText) {
+          displayText = '오른쪽 프리뷰 화면에 요청하신 코드를 만들어 두었어요! 확인해 보세요.';
         }
-        // Update the message one last time without the code block
+        // Update the message: text for UI display, fullText for API history & storage!
         setMessages(prev => prev.map(msg => 
-            msg.id === aiMessageId ? { ...msg, text: aiText } : msg
+            msg.id === aiMessageId ? { 
+              ...msg, 
+              text: displayText,
+              fullText: rawAiText
+            } : msg
+        ));
+      } else {
+        setMessages(prev => prev.map(msg => 
+            msg.id === aiMessageId ? { 
+              ...msg, 
+              fullText: rawAiText
+            } : msg
         ));
       }
 
@@ -892,7 +982,16 @@ function StudentSandbox() {
           <div className="message-list">
             {messages.map((msg) => (
               <div key={msg.id} className={`message animate-fade-in ${msg.sender}`}>
-                {msg.text}
+                {msg.image && (
+                  <div className="message-image-container">
+                    <img 
+                      src={msg.image.previewUrl || `data:${msg.image.mimeType};base64,${msg.image.data}`} 
+                      alt="첨부된 이미지" 
+                      className="message-image"
+                    />
+                  </div>
+                )}
+                {msg.text && <div className="message-text-content">{msg.text}</div>}
               </div>
             ))}
             {isLoading && (
@@ -903,23 +1002,53 @@ function StudentSandbox() {
             <div ref={messagesEndRef} />
           </div>
           
-          <div className="input-area">
-            <input
-              type="text"
-              className="chat-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="튜터에게 공부 궁금증(수학, 과학, 국어 등)을 질문하거나 코딩을 부탁해 보세요!"
-              disabled={isLoading}
-            />
-            <button 
-              className="send-button" 
-              onClick={handleSend}
-              disabled={!input.trim() || isLoading}
-            >
-              <Send size={20} />
-            </button>
+          <div className="input-area-container" onPaste={handlePaste}>
+            {selectedImage && (
+              <div className="image-preview-bar">
+                <div className="image-preview-thumbnail">
+                  <img src={selectedImage.dataUrl} alt="첨부 이미지 미리보기" />
+                  <button className="remove-image-btn" onClick={() => setSelectedImage(null)} title="이미지 취소">
+                    <X size={14} />
+                  </button>
+                </div>
+                <span className="image-preview-tip">📷 이미지가 준비되었어요! 질문과 함께 전송해 보세요.</span>
+              </div>
+            )}
+            <div className="input-area">
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleImageSelect}
+              />
+              <button 
+                type="button"
+                className="image-attach-btn"
+                onClick={() => fileInputRef.current?.click()}
+                title="이미지 파일 선택"
+                disabled={isLoading}
+              >
+                <ImageIcon size={20} />
+              </button>
+              <input
+                type="text"
+                className="chat-input"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                onPaste={handlePaste}
+                placeholder="학습/수학 질문을 쓰거나, 스크린샷을 붙여넣어(Ctrl+V) 질문해 보세요!"
+                disabled={isLoading}
+              />
+              <button 
+                className="send-button" 
+                onClick={handleSend}
+                disabled={(!input.trim() && !selectedImage) || isLoading}
+              >
+                <Send size={20} />
+              </button>
+            </div>
           </div>
         </section>
 
