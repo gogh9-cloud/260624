@@ -586,7 +586,7 @@ function StudentSandbox() {
     setInput('');
     setSelectedImage(null);
     setIsLoading(true);
-    setLoadingText('튜터가 이미지를 분석하고 생각 중이에요... 💭');
+    setLoadingText(selectedImage ? '튜터가 이미지를 분석하고 생각 중이에요... 💭' : '튜터가 열심히 생각 중이에요... 💭');
 
     // Timers to update loading text for long tasks
     loadingTimerRef.current = setTimeout(() => {
